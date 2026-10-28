@@ -1,0 +1,1207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12161d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Baby Log">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<title>Baby Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<!--
+  SETUP (one time, ~10 minutes)
+  1. console.firebase.google.com → Add project → Build → Firestore Database → Create (production mode).
+  2. Project settings → Your apps → Web (</>) → copy the firebaseConfig object into FIREBASE_CONFIG below.
+  3. Firestore → Rules → paste the rules from the bottom of this comment → Publish.
+  4. Push these 5 files to a GitHub repo → Settings → Pages → deploy from main branch.
+  5. Open the site on your phone → Settings tab → "Share invite link" → open it on your partner’s phone.
+
+  Firestore rules:
+    rules_version = '2';
+    service cloud.firestore {
+      match /databases/{database}/documents {
+        match /families/{family}/events/{event} {
+          allow read, write: if true;
+        }
+      }
+    }
+  Your data is separated by a long random family code (in the invite link), so nobody
+  can find it without the link. Don’t post the invite link anywhere public.
+-->
+<style>
+:root{
+  --bg:#12161d; --surface:#1a2029; --raised:#232b36; --line:#2c3643;
+  --ink:#e8ecf1; --muted:#93a0b2;
+  --left:#6cc4d6; --right:#f1aa6a; --sleep:#a398ee; --bottle:#8fd19e;
+  --on:#10141a; --stopbg:#10141a; --stopfg:#f4f6f9; --danger:#f28b8b; --warn:#f1c46a;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#eceff3; --surface:#ffffff; --raised:#f4f6f9; --line:#d6dde6;
+    --ink:#18202b; --muted:#5a6778;
+    --left:#157790; --right:#b05a10; --sleep:#5b4fc9; --bottle:#2a7f44;
+    --on:#ffffff; --danger:#b83232; --warn:#8a5b00;
+    color-scheme:light;
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{
+  font:400 16px/1.45 "Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  min-height:100dvh;max-width:560px;margin:0 auto;
+  padding:env(safe-area-inset-top,0) 0 calc(76px + env(safe-area-inset-bottom,0));
+}
+h1,h2,.display{font-family:"Bricolage Grotesque","Figtree",system-ui,sans-serif;letter-spacing:-.01em}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--sleep);outline-offset:2px}
+
+.top{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 6px}
+.top h1{margin:0;font-size:1.5rem;font-weight:700}
+.sync{font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:6px}
+.sync::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.sync.live::before{background:var(--bottle)}
+.sync.pending::before,.sync.local::before{background:var(--warn)}
+.sync.error::before{background:var(--danger)}
+
+main{padding:8px 16px 24px}
+.strip{background:var(--raised);border-radius:14px;padding:10px 14px;margin:6px 0 14px;font-size:.95rem;display:flex;justify-content:space-between;gap:12px}
+.strip b{font-variant-numeric:tabular-nums}
+.strip.sleep{border-left:4px solid var(--sleep)}
+
+.lastfed{padding:8px 4px 16px}
+.lastfed .k{margin:0;color:var(--muted);font-size:.95rem}
+.lastfed .v{margin:0;font:700 2.4rem/1.1 "Bricolage Grotesque",sans-serif}
+.lastfed .sub{margin:4px 0 0;color:var(--muted)}
+
+.sides{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.side{
+  position:relative;height:clamp(180px,34dvh,280px);border-radius:26px;border:3px solid;
+  background:transparent;display:flex;align-items:flex-end;justify-content:flex-start;padding:18px;
+  font:700 2rem/1 "Bricolage Grotesque",sans-serif;
+}
+.side.left{border-color:var(--left);color:var(--left)}
+.side.right{border-color:var(--right);color:var(--right)}
+.side.next.left{background:var(--left);color:var(--on)}
+.side.next.right{background:var(--right);color:var(--on)}
+.side .tag{position:absolute;top:14px;left:16px;font:600 .85rem "Figtree",sans-serif;
+  background:var(--on);color:var(--ink);padding:3px 10px;border-radius:99px}
+.side:active{transform:scale(.98)}
+
+.btn{border:0;border-radius:16px;padding:15px 18px;font-weight:600;font-size:1rem;background:var(--raised);min-height:52px}
+.btn.wide{width:100%;margin-top:12px}
+.btn.solid{background:var(--ink);color:var(--bg)}
+.btn.danger{background:transparent;color:var(--danger);border:2px solid var(--danger)}
+.btn.ghost{background:transparent;border:2px solid var(--line)}
+.btn.stop{background:var(--stopbg);color:var(--stopfg)}
+.btn.swap{background:transparent;border:2px solid var(--on);color:var(--on)}
+
+.active{border-radius:28px;padding:22px 20px 20px;color:var(--on);margin-top:4px}
+.active.left{background:var(--left)} .active.right{background:var(--right)} .active.sleepcard{background:var(--sleep)}
+.active .lab{margin:0;font-weight:600;opacity:.9}
+.big{font:700 clamp(4rem,22vw,6.5rem)/1 "Bricolage Grotesque",sans-serif;font-variant-numeric:tabular-nums;margin:14px 0 20px;letter-spacing:-.03em}
+.active .row{display:grid;gap:10px}
+.active .hint{margin:14px 0 0;font-size:.9rem;opacity:.9}
+
+.sleepidle{padding:8px 4px 18px}
+.sleepidle .k{margin:0;color:var(--muted)}
+.sleepidle .big{color:var(--ink);margin:6px 0 0}
+.start-sleep{width:100%;height:clamp(150px,26dvh,220px);border-radius:26px;border:3px solid var(--sleep);
+  background:var(--sleep);color:var(--on);font:700 2rem "Bricolage Grotesque",sans-serif}
+
+.tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:6px 0 16px}
+.tile{background:var(--surface);border-radius:16px;padding:12px 14px}
+.tile .n{font:700 1.6rem/1.1 "Bricolage Grotesque",sans-serif}
+.tile .l{color:var(--muted);font-size:.9rem}
+.actions{display:flex;gap:10px;margin-bottom:6px}
+.actions .btn{flex:1;padding:12px;min-height:46px}
+
+.day{margin-top:20px}
+.day h2{margin:0;font-size:1.15rem}
+.day .tot{margin:2px 0 8px;color:var(--muted);font-size:.9rem}
+.entry{width:100%;text-align:left;border:0;background:var(--surface);border-radius:14px;padding:12px 14px;margin-bottom:8px;
+  display:grid;grid-template-columns:14px 1fr;column-gap:12px;align-items:center}
+.entry .dot{width:12px;height:12px;border-radius:50%;grid-row:span 2}
+.dot.L{background:var(--left)} .dot.R{background:var(--right)} .dot.B{background:var(--bottle)} .dot.S{background:var(--sleep)}
+.entry .m{font-weight:600}
+.entry .s{color:var(--muted);font-size:.9rem}
+.empty{color:var(--muted);padding:24px 4px;text-align:center}
+
+.set{background:var(--surface);border-radius:18px;padding:16px;margin-bottom:14px}
+.set h2{margin:0 0 10px;font-size:1.1rem}
+.set p{margin:6px 0;color:var(--muted);font-size:.92rem}
+label{display:grid;gap:6px;margin:12px 0;font-weight:500}
+input[type=text],input[type=number],input[type=datetime-local],input[type=date],input[type=time],select{
+  width:100%;padding:12px;border-radius:12px;border:2px solid var(--line);background:var(--raised);min-height:48px}
+.check{display:flex;align-items:center;gap:12px;font-weight:500}
+.check input{width:22px;height:22px;accent-color:var(--sleep)}
+.inline{display:flex;gap:8px}
+.inline .btn{flex:1}
+.mono{word-break:break-all;font-size:.82rem;background:var(--raised);padding:10px;border-radius:10px;color:var(--muted)}
+
+.tabs{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:560px;
+  display:grid;grid-template-columns:repeat(4,1fr);background:var(--surface);border-top:1px solid var(--line);
+  padding:6px 6px calc(6px + env(safe-area-inset-bottom,0))}
+.tabs button{background:none;border:0;display:grid;justify-items:center;gap:2px;padding:8px 0;color:var(--muted);font-size:.78rem;font-weight:500;border-radius:12px}
+.tabs button[aria-current=page]{color:var(--ink);font-weight:600}
+.tabs button[aria-current=page] svg{stroke:var(--ink)}
+.tabs svg{width:26px;height:26px;fill:none;stroke:var(--muted);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+
+dialog{border:0;padding:0;background:var(--surface);color:var(--ink);width:100%;max-width:560px;
+  margin:auto auto 0;border-radius:26px 26px 0 0;max-height:92dvh;overflow:auto}
+dialog::backdrop{background:rgba(5,8,12,.62)}
+.sheet-in{padding:22px 20px calc(22px + env(safe-area-inset-bottom,0))}
+.sheet-in h2{margin:0 0 6px;font-size:1.5rem}
+.sheet-in p{margin:4px 0 12px;color:var(--muted)}
+.stack{display:grid;gap:10px;margin-top:16px}
+.err{color:var(--danger);min-height:1.2em;margin:4px 0 0!important}
+
+#toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom,0));transform:translateX(-50%);
+  background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:99px;font-weight:600;font-size:.92rem;
+  max-width:90%;text-align:center;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.show{opacity:1}
+.sum-big{font:700 3.6rem/1 "Bricolage Grotesque",sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-.03em;margin:8px 0 4px}
+.sum-rows{display:grid;gap:8px;margin:12px 0 4px}
+.sum-row{display:flex;align-items:center;gap:10px;font-weight:600}
+.sum-row .dot{width:12px;height:12px;border-radius:50%}
+.sum-row span:last-child{margin-left:auto;font-variant-numeric:tabular-nums}
+#toast.act{pointer-events:auto}
+#toast button{background:none;border:0;color:var(--bg);font-weight:700;text-decoration:underline;margin-left:14px;padding:8px 4px;min-height:36px}
+.seg{display:flex;background:var(--surface);border-radius:14px;padding:4px;gap:4px;margin:4px 0 12px}
+.seg button{flex:1;border:0;background:none;border-radius:11px;padding:8px 2px;font-weight:600;color:var(--muted);min-height:42px;font-size:.92rem}
+.seg button[aria-pressed=true]{background:var(--raised);color:var(--ink);box-shadow:inset 0 0 0 2px var(--line)}
+.nav{display:flex;align-items:center;justify-content:space-between;margin:2px 0 12px}
+.nav b{font:700 1.15rem "Bricolage Grotesque",sans-serif;text-align:center}
+.nav button{width:52px;height:44px;border:0;background:var(--surface);border-radius:12px;font-size:1.4rem;color:var(--ink)}
+.nav button:disabled{opacity:.35}
+.daterow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+details.filter{background:var(--surface);border-radius:14px;padding:12px 14px;margin-bottom:12px}
+details.filter summary{cursor:pointer;font-weight:600;min-height:28px}
+details.filter .btn{margin-top:6px;width:100%}
+.chart{background:var(--surface);border-radius:18px;padding:12px 8px 10px;margin-bottom:12px}
+.chart svg{width:100%;height:auto;display:block}
+.chart .cap{margin:0 8px 6px;color:var(--muted);font-size:.88rem}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin:6px 8px 0;font-size:.85rem;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px}
+.lg-L{background:var(--left)} .lg-R{background:var(--right)} .lg-B{background:var(--bottle)} .lg-S{background:var(--sleep)}
+.c-L{fill:var(--left)} .c-R{fill:var(--right)} .c-B{fill:var(--bottle)} .c-S{fill:var(--sleep)}
+.ax{fill:var(--muted);font-size:10px;font-family:"Figtree",system-ui,sans-serif}
+.grid{stroke:var(--line);stroke-width:1}
+.dim{fill:var(--surface);opacity:.7}
+.nowline{stroke:var(--ink);stroke-width:1.5}
+.drow{display:grid;grid-template-columns:1fr 46px 70px 70px;gap:6px;width:100%;text-align:left;border:0;background:var(--surface);border-radius:12px;padding:11px 12px;margin-bottom:6px;font-size:.93rem;align-items:center}
+.drow.h{background:none;color:var(--muted);font-size:.8rem;padding:2px 12px;margin-bottom:2px}
+.drow span:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.top-r{display:grid;justify-items:end;gap:2px}
+.wx-chip{background:none;border:0;padding:0;font-weight:600;font-size:1rem;color:var(--ink)}
+.wx-chip small{color:var(--muted);font-weight:400;font-size:.8rem}
+.wx{background:var(--surface);border-radius:20px;padding:16px;margin-top:16px}
+.wx h2{margin:0 0 8px;font-size:1.1rem}
+.wx-now{display:flex;align-items:center;gap:14px}
+.wx-t{font:700 3rem/1 "Bricolage Grotesque",sans-serif;letter-spacing:-.03em}
+.wx-c{margin:0;font-weight:600}
+.wx-s{margin:4px 0;color:var(--muted);font-size:.92rem}
+.wx-hours{display:flex;gap:8px;overflow-x:auto;margin:12px -4px 4px;padding:4px;scrollbar-width:none}
+.wx-h{flex:0 0 auto;min-width:68px;background:var(--raised);border-radius:14px;padding:8px 6px;display:grid;justify-items:center;gap:2px;font-size:.95rem}
+.wx-hh{color:var(--muted);font-size:.8rem}
+.wx-fl{color:var(--muted);font-size:.75rem}
+.wx-pp{color:var(--left);font-size:.8rem;min-height:1.1em}
+.wx-days{margin-top:8px}
+.wx-d{display:grid;grid-template-columns:52px 1fr auto;gap:8px;padding:8px 0;border-top:1px solid var(--line);font-size:.95rem}
+.wx-dc{color:var(--muted)}
+.wx-up{margin:10px 0 0;color:var(--muted);font-size:.8rem}
+
+/* Small windows: floating, pop-up or split-screen */
+@media (max-height:600px), (max-width:340px){
+  body{padding-bottom:calc(56px + env(safe-area-inset-bottom,0))}
+  .top{padding:8px 14px 2px} .top h1{font-size:1.15rem}
+  main{padding:4px 12px 12px}
+  .strip,.active .hint{display:none}
+  .lastfed{padding:2px 2px 8px} .lastfed .v{font-size:1.5rem}
+  .sides{gap:8px}
+  .side{height:clamp(96px,30dvh,150px);font-size:1.5rem;padding:12px;border-radius:20px}
+  .side .tag{top:8px;left:10px;font-size:.75rem}
+  .btn{min-height:44px;padding:10px 14px}
+  .active{padding:14px;border-radius:22px}
+  .big{font-size:clamp(2.6rem,16vw,4rem);margin:6px 0 12px}
+  .start-sleep{height:clamp(90px,28dvh,140px);font-size:1.5rem}
+  .tabs button{padding:3px 0;font-size:.7rem} .tabs svg{width:20px;height:20px}
+  .sheet-in{padding:16px 16px calc(16px + env(safe-area-inset-bottom,0))}
+}
+@media (prefers-reduced-motion: reduce){ *{transition:none!important} .side:active{transform:none} }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1 id="baby">Baby</h1>
+  <div class="top-r">
+    <button class="wx-chip" id="wx-chip" data-tab="sleep" aria-label="Weather" hidden></button>
+    <span class="sync" id="sync" role="status"></span>
+  </div>
+</header>
+<main id="view"></main>
+
+<nav class="tabs" id="tabs" aria-label="Sections">
+  <button data-tab="feed"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c3 4 6 7 6 11a6 6 0 0 1-12 0c0-4 3-7 6-11z"/></svg>Feed</button>
+  <button data-tab="sleep"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>Sleep</button>
+  <button data-tab="log"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></svg>History</button>
+  <button data-tab="settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>Settings</button>
+</nav>
+
+<dialog id="checkin" aria-labelledby="ci-title">
+  <div class="sheet-in">
+    <h2 id="ci-title">Still feeding?</h2>
+    <p id="ci-body"></p>
+    <div class="stack">
+      <button class="btn solid" data-act="ci-yes">Still feeding</button>
+      <button class="btn danger" data-act="ci-stop">Stop the timer now</button>
+      <button class="btn ghost" data-act="ci-fix">Set the end time</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="sheet" aria-label="Entry"></dialog>
+<dialog id="summary" aria-label="Summary"></dialog>
+
+<dialog id="welcome" aria-labelledby="w-title">
+  <div class="sheet-in">
+    <h2 id="w-title">Welcome</h2>
+    <p>Tell us who’s logging on this phone and the baby’s name.</p>
+    <label>Your name<input id="w-me" type="text" autocomplete="given-name" placeholder="e.g. Gage"></label>
+    <label>Baby’s name<input id="w-baby" type="text" placeholder="e.g. Baby"></label>
+    <div class="stack"><button class="btn solid" data-act="welcome-save">Start logging</button></div>
+  </div>
+</dialog>
+
+<div id="toast" role="status"></div>
+<noscript>Baby Log needs JavaScript.</noscript>
+
+<script>
+"use strict";
+
+/* ---------- Config ---------- */
+// Paste your Firebase web config here (see SETUP at the top). Leave null to run on this phone only.
+const FIREBASE_CONFIG = null;
+// Example:
+// const FIREBASE_CONFIG = { apiKey:"...", authDomain:"...", projectId:"...", storageBucket:"...", messagingSenderId:"...", appId:"..." };
+const CHECKIN_MINUTES = [20, 30];   // "Still feeding?" prompts
+const FIREBASE_VER = "10.12.2";
+const HISTORY_DAYS = 400;
+const WX = { lat: 60.7212, lon: -135.0568, tz: "America/Whitehorse", place: "Whitehorse" };  // weather location
+
+/* ---------- Small utils ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const pad = n => String(n).padStart(2, "0");
+const now = () => Date.now();
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const LS = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+};
+const sideName = s => s === "L" ? "Left" : s === "R" ? "Right" : "Bottle";
+const otherSide = s => s === "L" ? "R" : "L";
+
+function fmtDur(ms) {
+  const m = Math.round(ms / 60000);
+  if (m < 1) return "under 1m";
+  const h = Math.floor(m / 60);
+  return h ? `${h}h ${pad(m % 60)}m` : `${m}m`;
+}
+function ago(ms) { return ms < 60000 ? "just now" : fmtDur(ms) + " ago"; }
+function clock(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60;
+  return h ? `${h}:${pad(m)}:${pad(x)}` : `${m}:${pad(x)}`;
+}
+const clockTime = ms => new Date(ms).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+const toLocalInput = ms => { const d = new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const fromLocalInput = s => s ? new Date(s).getTime() : null;
+const dayKey = ms => { const d = new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+function dayLabel(key) {
+  const y = new Date(); y.setDate(y.getDate() - 1);
+  if (key === dayKey(now())) return "Today";
+  if (key === dayKey(y.getTime())) return "Yesterday";
+  const [Y, M, D] = key.split("-").map(Number);
+  return new Date(Y, M - 1, D).toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" });
+}
+function newCode() {
+  const a = new Uint8Array(20); crypto.getRandomValues(a);
+  return Array.from(a, b => (b % 36).toString(36)).join("");
+}
+let toastTimer;
+function toast(msg, action) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.toggle("act", !!action);
+  if (action) {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = action.label;
+    b.addEventListener("click", () => { t.classList.remove("show"); action.fn(); });
+    t.appendChild(b);
+  }
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), action ? 7000 : 2600);
+}
+const buzz = () => { try { navigator.vibrate && navigator.vibrate(15); } catch {} };
+
+/* ---------- State ---------- */
+const S = {
+  tab: "feed",
+  events: [],
+  status: "local",
+  me: LS.get("bl_me", ""),
+  baby: LS.get("bl_baby", "Baby"),
+  code: LS.get("bl_code", ""),
+  keepAwake: LS.get("bl_awake", true),
+  notify: LS.get("bl_notify", false),
+  wx: LS.get("bl_wx", null),
+  logView: "entries",
+  ins: { mode: "week", end: dayKey(now()), start: null, metric: "feedMin", tFrom: "00:00", tTo: "23:59" }
+};
+let store = null;
+
+/* ---------- Stores (same interface: local-only or Firestore) ---------- */
+function makeLocalStore(code) {
+  const key = "bl_events_" + code;
+  let evs = LS.get(key, []);
+  const subs = [];
+  const sorted = () => [...evs].sort((a, b) => b.start - a.start);
+  const emit = () => { LS.set(key, evs); subs.forEach(f => f(sorted())); };
+  return {
+    subscribe(cb, onStatus) { subs.push(cb); cb(sorted()); onStatus("local"); },
+    add(ev) { const id = (crypto.randomUUID && crypto.randomUUID()) || Math.random().toString(36).slice(2); evs.push({ ...ev, id }); emit(); return id; },
+    update(id, patch) { evs = evs.map(e => e.id === id ? { ...e, ...patch } : e); emit(); },
+    remove(id) { evs = evs.filter(e => e.id !== id); emit(); }
+  };
+}
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = src; s.onload = res; s.onerror = () => rej(new Error("Could not load " + src));
+    document.head.appendChild(s);
+  });
+}
+async function loadFirebase() {
+  const base = `https://www.gstatic.com/firebasejs/${FIREBASE_VER}/`;
+  await loadScript(base + "firebase-app-compat.js");
+  await loadScript(base + "firebase-firestore-compat.js");
+}
+function makeCloudStore(code) {
+  firebase.initializeApp(FIREBASE_CONFIG);
+  const db = firebase.firestore();
+  try { db.enablePersistence({ synchronizeTabs: true }).catch(() => {}); } catch {}
+  const col = db.collection("families").doc(code).collection("events");
+  const since = now() - HISTORY_DAYS * 86400000;
+  const fail = e => { console.error(e); toast("Couldn’t save. Check your connection."); };
+  return {
+    subscribe(cb, onStatus) {
+      col.where("start", ">=", since).orderBy("start", "desc")
+        .onSnapshot({ includeMetadataChanges: true }, snap => {
+          cb(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+          onStatus(snap.metadata.hasPendingWrites ? "pending" : "live");
+        }, err => { console.error(err); onStatus("error"); });
+    },
+    add(ev) { const ref = col.doc(); ref.set(ev).catch(fail); return ref.id; },
+    update(id, patch) { col.doc(id).update(patch).catch(fail); },
+    remove(id) { col.doc(id).delete().catch(fail); }
+  };
+}
+
+/* ---------- Derived data ---------- */
+const activeFeed = () => S.events.find(e => e.type === "feed" && e.side !== "B" && !e.end);
+const activeSleep = () => S.events.find(e => e.type === "sleep" && !e.end);
+const lastBreast = () => S.events.find(e => e.type === "feed" && (e.side === "L" || e.side === "R"));
+const lastSleepEnded = () => S.events.find(e => e.type === "sleep" && e.end);
+
+function stats(list) {
+  const r = { feeds: 0, feedMs: 0, ml: 0, sleeps: 0, sleepMs: 0 };
+  for (const e of list) {
+    const end = e.end || now();
+    if (e.type === "feed") {
+      r.feeds++;
+      if (e.side === "B") r.ml += e.ml || 0; else r.feedMs += end - e.start;
+    } else { r.sleeps++; r.sleepMs += end - e.start; }
+  }
+  return r;
+}
+const todayEvents = () => S.events.filter(e => dayKey(e.start) === dayKey(now()));
+
+/* ---------- Actions ---------- */
+function startFeed(side) {
+  if (activeFeed()) return;
+  const id = store.add({ type: "feed", side, start: now(), end: null, ml: null, by: S.me, ack: 0 });
+  buzz();
+  toast(`${sideName(side)} side started`, { label: "Undo", fn: () => store.remove(id) });
+}
+function switchSide() {
+  const a = activeFeed(); if (!a) return;
+  const t = now();
+  store.update(a.id, { end: t });
+  store.add({ type: "feed", side: otherSide(a.side), start: t, end: null, ml: null, by: S.me, ack: 0 });
+}
+const stopEvent = (id, at = now()) => store.update(id, { end: at });
+function startSleep() {
+  if (activeSleep()) return;
+  const id = store.add({ type: "sleep", side: null, start: now(), end: null, ml: null, by: S.me, ack: 0 });
+  buzz();
+  toast("Sleep started", { label: "Undo", fn: () => store.remove(id) });
+}
+
+/* ---------- Summaries after stopping ---------- */
+const GAP_MS = 15 * 60000;   // feeds closer together than this count as one session
+function feedSession(last) {
+  const segs = [last]; let cur = last;
+  for (const e of S.events) {
+    if (e.id === last.id || e.type !== "feed" || e.side === "B" || !e.end || e.start >= cur.start) continue;
+    if (cur.start - e.end <= GAP_MS) { segs.push(e); cur = e; } else break;
+  }
+  return segs;
+}
+function stopFeed(id) {
+  const ev = S.events.find(e => e.id === id); if (!ev) return;
+  const end = now();
+  stopEvent(id, end); buzz();
+  showFeedSummary({ ...ev, end });
+}
+function stopSleep(id) {
+  const ev = S.events.find(e => e.id === id); if (!ev) return;
+  const end = now();
+  stopEvent(id, end); buzz();
+  showSleepSummary({ ...ev, end });
+}
+function showFeedSummary(last) {
+  const segs = feedSession(last);
+  const per = { L: 0, R: 0 };
+  for (const e of segs) per[e.side] += e.end - e.start;
+  const total = per.L + per.R, startAt = segs[segs.length - 1].start;
+  const both = per.L > 0 && per.R > 0;
+  const same = last.side, other = otherSide(last.side);
+  const rows = ["L", "R"].filter(x => per[x] > 0)
+    .map(x => `<div class="sum-row"><span class="dot ${x}"></span><span>${sideName(x)} side</span><span>${clock(per[x])}</span></div>`).join("");
+  const d = $("#summary");
+  d.innerHTML = `<div class="sheet-in">
+    <h2>Feed finished</h2>
+    <div class="sum-big">${clock(total)}</div>
+    <p>${clockTime(startAt)} to ${clockTime(last.end)}${last.by ? ", " + esc(last.by) : ""}</p>
+    <div class="sum-rows">${rows}</div>
+    <div class="stack">
+      <button class="btn ${both ? "" : "solid"}" data-act="sum-feed" data-side="${other}">Switch to the ${sideName(other).toLowerCase()} side</button>
+      <button class="btn" data-act="sum-feed" data-side="${same}">Continue on the ${sideName(same).toLowerCase()} side</button>
+      <button class="btn" data-act="sum-sleep">Baby’s asleep: start sleep</button>
+      <button class="btn ghost" data-act="sum-fix" data-id="${esc(last.id)}">Fix the times</button>
+      <button class="btn ${both ? "solid" : "ghost"}" data-act="sum-done">Done</button>
+    </div></div>`;
+  d.showModal();
+}
+function showSleepSummary(ev) {
+  const lf = lastBreast();
+  const d = $("#summary");
+  d.innerHTML = `<div class="sheet-in">
+    <h2>Sleep finished</h2>
+    <div class="sum-big">${fmtDur(ev.end - ev.start)}</div>
+    <p>${clockTime(ev.start)} to ${clockTime(ev.end)}${ev.by ? ", " + esc(ev.by) : ""}</p>
+    ${lf ? `<p>Last fed on the ${sideName(lf.side).toLowerCase()} side ${ago(now() - (lf.end || lf.start))}.</p>` : ""}
+    <div class="stack">
+      <button class="btn solid" data-act="sum-gofeed">Start a feed</button>
+      <button class="btn" data-act="sum-resume" data-id="${esc(ev.id)}">Still asleep</button>
+      <button class="btn ghost" data-act="sum-fix" data-id="${esc(ev.id)}">Fix the times</button>
+      <button class="btn ghost" data-act="sum-done">Done</button>
+    </div></div>`;
+  d.showModal();
+}
+
+/* ---------- Views ---------- */
+function todayStrip() {
+  const s = stats(todayEvents());
+  const parts = [`<span>Today</span>`, `<b>${s.feeds} feed${s.feeds === 1 ? "" : "s"} · ${fmtDur(s.feedMs)}</b>`];
+  return `<div class="strip">${parts.join("")}</div>`;
+}
+
+function viewFeed() {
+  const a = activeFeed(), sl = activeSleep();
+  let h = "";
+  if (sl) h += `<div class="strip sleep"><span>Asleep</span><b data-since="${sl.start}">0:00</b></div>`;
+  if (a) {
+    const col = a.side === "L" ? "left" : "right";
+    h += `<section class="active ${col}">
+      <p class="lab">${sideName(a.side)} side · started ${clockTime(a.start)}${a.by ? " · " + esc(a.by) : ""}</p>
+      <div class="big" data-since="${a.start}">0:00</div>
+      <div class="row">
+        <button class="btn stop" data-act="stop-feed">Stop feeding</button>
+        <button class="btn swap" data-act="switch-side">Switch to ${sideName(otherSide(a.side)).toLowerCase()} side</button>
+      </div>
+      <p class="hint">Check-ins at ${CHECKIN_MINUTES.join(" and ")} minutes.</p>
+    </section>`;
+    return h + todayStrip();
+  }
+  const last = lastBreast();
+  const next = last ? otherSide(last.side) : null;
+  h += `<section class="lastfed">`;
+  if (last) {
+    h += `<p class="k">Last fed on the</p><p class="v">${sideName(last.side)} side</p>
+      <p class="sub"><span data-ago="${last.end || last.start}"></span> · ${fmtDur((last.end || now()) - last.start)}</p>`;
+  } else {
+    h += `<p class="v">No feeds yet</p><p class="sub">Tap a side to start the timer.</p>`;
+  }
+  h += `</section><div class="sides">`;
+  for (const s of ["L", "R"]) {
+    h += `<button class="side ${s === "L" ? "left" : "right"} ${s === next ? "next" : ""}" data-act="start-feed" data-side="${s}">
+      ${s === next ? `<span class="tag">Next</span>` : ""}${sideName(s)}</button>`;
+  }
+  h += `</div><button class="btn wide" data-act="bottle">Log a bottle</button>`;
+  return h + `<div style="height:14px"></div>` + todayStrip();
+}
+
+function viewSleep() {
+  const sl = activeSleep();
+  const s = stats(todayEvents());
+  let h = "";
+  if (sl) {
+    h += `<section class="active sleepcard">
+      <p class="lab">Asleep since ${clockTime(sl.start)}${sl.by ? " · " + esc(sl.by) : ""}</p>
+      <div class="big" data-since="${sl.start}">0:00</div>
+      <div class="row"><button class="btn stop" data-act="stop-sleep">Wake up</button></div>
+    </section>`;
+  } else {
+    const last = lastSleepEnded();
+    h += `<section class="sleepidle">`;
+    if (last) h += `<p class="k">Awake for</p><div class="big" data-since="${last.end}">0:00</div>`;
+    else h += `<p class="k">No sleep logged yet</p>`;
+    h += `</section><button class="start-sleep" data-act="start-sleep">Start sleep</button>`;
+  }
+  h += `<div class="strip" style="margin-top:14px"><span>Today</span><b>${s.sleeps} sleep${s.sleeps === 1 ? "" : "s"} · ${fmtDur(s.sleepMs)}</b></div>`;
+  return h + weatherCard();
+}
+
+function entryHtml(e) {
+  const kind = e.type === "sleep" ? "S" : e.side;
+  const dur = (e.end || now()) - e.start;
+  let main;
+  if (e.type === "sleep") main = `Sleep · ${e.end ? fmtDur(dur) : "running"}`;
+  else if (e.side === "B") main = `Bottle${e.ml ? " · " + e.ml + " ml" : ""}`;
+  else main = `${sideName(e.side)} side · ${e.end ? fmtDur(dur) : "running"}`;
+  const range = e.type === "feed" && e.side === "B" ? clockTime(e.start)
+    : `${clockTime(e.start)} – ${e.end ? clockTime(e.end) : "now"}`;
+  return `<button class="entry" data-act="edit" data-id="${esc(e.id)}">
+    <span class="dot ${kind}"></span><span class="m">${main}</span>
+    <span class="s">${range}${e.by ? " · " + esc(e.by) : ""}</span></button>`;
+}
+
+function viewLog() {
+  const tabs = `<div class="seg" role="group" aria-label="History view">
+    <button data-act="logview" data-v="entries" aria-pressed="${S.logView === "entries"}">Entries</button>
+    <button data-act="logview" data-v="insights" aria-pressed="${S.logView === "insights"}">Insights</button></div>`;
+  return tabs + (S.logView === "insights" ? viewInsights() : viewEntries());
+}
+
+function viewEntries() {
+  const t = stats(todayEvents());
+  let h = `<div class="tiles">
+    <div class="tile"><div class="n">${t.feeds}</div><div class="l">Feeds today</div></div>
+    <div class="tile"><div class="n">${fmtDur(t.feedMs)}</div><div class="l">Feeding time today</div></div>
+    <div class="tile"><div class="n">${t.sleeps}</div><div class="l">Sleeps today</div></div>
+    <div class="tile"><div class="n">${fmtDur(t.sleepMs)}</div><div class="l">Sleep today</div></div>
+    ${t.ml ? `<div class="tile"><div class="n">${t.ml} ml</div><div class="l">Bottle today</div></div>` : ""}
+  </div>
+  <div class="actions">
+    <button class="btn" data-act="add-past">Add an entry</button>
+    <button class="btn" data-act="export">Export CSV</button>
+  </div>`;
+  if (!S.events.length) return h + `<p class="empty">Nothing logged yet. Feeds and sleeps will show up here.</p>`;
+  const groups = new Map();
+  for (const e of S.events) {
+    const k = dayKey(e.start);
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(e);
+  }
+  for (const [k, list] of groups) {
+    const s = stats(list);
+    const bits = [`${s.feeds} feed${s.feeds === 1 ? "" : "s"} · ${fmtDur(s.feedMs)}`];
+    if (s.ml) bits.push(`${s.ml} ml bottle`);
+    bits.push(`${fmtDur(s.sleepMs)} sleep`);
+    h += `<section class="day"><h2>${esc(dayLabel(k))}</h2><p class="tot">${bits.join(" · ")}</p>${list.map(entryHtml).join("")}</section>`;
+  }
+  return h;
+}
+
+/* ---------- Insights ---------- */
+const MODES = [["day", "Day"], ["week", "Week"], ["month", "Month"], ["quarter", "3 mo"], ["custom", "Custom"]];
+const METRICS = [["feeds", "Feeds"], ["feedMin", "Feed time"], ["sleep", "Sleep"], ["bottle", "Bottle"]];
+const SERIES = {
+  feeds: [{ c: "L", name: "Left", v: b => b.fL }, { c: "R", name: "Right", v: b => b.fR }, { c: "B", name: "Bottle", v: b => b.fB }],
+  feedMin: [{ c: "L", name: "Left", v: b => b.mL / 60000 }, { c: "R", name: "Right", v: b => b.mR / 60000 }],
+  sleep: [{ c: "S", name: "Sleep", v: b => b.sl / 3600000 }],
+  bottle: [{ c: "B", name: "Bottle", v: b => b.ml }]
+};
+const UNITS = { feeds: "feeds", feedMin: "minutes of feeding", sleep: "hours of sleep", bottle: "ml of bottle" };
+const keyToDate = k => { const [Y, M, D] = k.split("-").map(Number); return new Date(Y, M - 1, D); };
+const addDays = (k, n) => { const d = keyToDate(k); d.setDate(d.getDate() + n); return dayKey(d.getTime()); };
+const daysBetween = (a, b) => Math.round((keyToDate(b) - keyToDate(a)) / 86400000);
+const hmToMin = v => { const m = /^(\d\d):(\d\d)$/.exec(v || ""); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
+const t12 = v => { const m = hmToMin(v); return m === null ? v : `${Math.floor(m / 60) % 12 || 12}:${pad(m % 60)} ${m < 720 ? "am" : "pm"}`; };
+const windowActive = () => !(S.ins.tFrom === "00:00" && S.ins.tTo === "23:59");
+const dur0 = ms => ms < 30000 ? "–" : fmtDur(ms);
+function inWindow(ms) {
+  const f = hmToMin(S.ins.tFrom), t = hmToMin(S.ins.tTo);
+  if (f === null || t === null) return true;
+  const d = new Date(ms), m = d.getHours() * 60 + d.getMinutes();
+  return f <= t ? (m >= f && m <= t) : (m >= f || m <= t);
+}
+function niceMax(v) {
+  if (v <= 0) return 1;
+  const p = Math.pow(10, Math.floor(Math.log10(v))), f = v / p;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p;
+}
+const fmtNum = v => (Math.abs(v - Math.round(v)) < 0.05 || v >= 10) ? String(Math.round(v)) : v.toFixed(1);
+
+function insRange() {
+  const I = S.ins, today = dayKey(now());
+  let end = I.end > today ? today : I.end, start;
+  if (I.mode === "day") start = end;
+  else if (I.mode === "week") start = addDays(end, -6);
+  else if (I.mode === "month") start = addDays(end, -29);
+  else if (I.mode === "quarter") start = addDays(end, -89);
+  else { start = I.start || addDays(end, -13); end = I.end || end; if (start > end) [start, end] = [end, start]; }
+  return { start, end };
+}
+function insShift(dir) {
+  const I = S.ins, r = insRange(), today = dayKey(now());
+  const step = I.mode === "day" ? 1 : I.mode === "week" ? 7 : I.mode === "month" ? 30 : I.mode === "quarter" ? 90 : daysBetween(r.start, r.end) + 1;
+  if (I.mode === "custom") { I.start = addDays(r.start, dir * step); I.end = addDays(r.end, dir * step); }
+  else { I.end = addDays(r.end, dir * step); if (I.end > today) I.end = today; }
+  render();
+}
+function insBuild() {
+  const { start, end } = insRange(), today = dayKey(now());
+  const days = [];
+  for (let k = start, n = 0; k <= end && n < 800; k = addDays(k, 1), n++) days.push(k);
+  const by = new Map(days.map(k => [k, { k, fL: 0, fR: 0, fB: 0, mL: 0, mR: 0, ml: 0, sl: 0, ns: 0, feeds: [] }]));
+  const startMs = keyToDate(start).getTime(), endMs = keyToDate(addDays(end, 1)).getTime();
+  const evs = S.events.filter(e => e.start >= startMs && e.start < endMs && inWindow(e.start)).sort((a, b) => a.start - b.start);
+  let firstAll = Infinity;
+  for (const e of S.events) if (e.start < firstAll) firstAll = e.start;
+  const firstKey = isFinite(firstAll) ? dayKey(firstAll) : today;
+  const feedStarts = [];
+  let longestSleep = 0, msL = 0, msR = 0, ml = 0, sleepMs = 0, feeds = 0, feedMs = 0;
+  for (const e of evs) {
+    const b = by.get(dayKey(e.start)); if (!b) continue;
+    const dur = (e.end || now()) - e.start;
+    if (e.type === "sleep") { b.sl += dur; b.ns++; sleepMs += dur; if (dur > longestSleep) longestSleep = dur; continue; }
+    b.feeds.push(e); feeds++; feedStarts.push(e.start);
+    if (e.side === "B") { b.fB++; b.ml += e.ml || 0; ml += e.ml || 0; }
+    else if (e.side === "L") { b.fL++; b.mL += dur; msL += dur; feedMs += dur; }
+    else { b.fR++; b.mR += dur; msR += dur; feedMs += dur; }
+  }
+  let gapSum = 0, gapN = 0;
+  for (let i = 1; i < feedStarts.length; i++) { const g = feedStarts[i] - feedStarts[i - 1]; if (g <= 12 * 3600000) { gapSum += g; gapN++; } }
+  const nd = Math.max(1, days.filter(k => k >= firstKey && k <= today).length);
+  return { start, end, days, by, evs, nd, feeds, feedMs, ml, sleepMs, longestSleep, msL, msR, avgGap: gapN ? gapSum / gapN : null, firstKey, today };
+}
+
+function barChart(D) {
+  const series = SERIES[S.ins.metric];
+  const weekly = D.days.length > 62;
+  const groups = [];
+  if (weekly) for (let i = 0; i < D.days.length; i += 7) groups.push(D.days.slice(i, i + 7));
+  else D.days.forEach(k => groups.push([k]));
+  const vals = groups.map(g => series.map(s => g.reduce((a, k) => a + s.v(D.by.get(k)), 0) / g.length));
+  const totals = vals.map(v => v.reduce((a, x) => a + x, 0));
+  const max = niceMax(Math.max(0, ...totals));
+  const W = 360, H = 190, L = 34, R = 8, T = 10, B = 26, iw = W - L - R, ih = H - T - B;
+  const step = iw / groups.length, bw = Math.max(2, step * 0.68);
+  let g = "";
+  [0, 0.5, 1].forEach(f => {
+    const y = T + ih - f * ih;
+    g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y}" y2="${y}"/><text class="ax" x="${L - 6}" y="${y + 3}" text-anchor="end">${fmtNum(max * f)}</text>`;
+  });
+  const every = Math.ceil(groups.length / (groups.length <= 7 ? 7 : 6));
+  groups.forEach((grp, i) => {
+    const x = L + i * step + (step - bw) / 2;
+    let y = T + ih;
+    series.forEach((s, j) => {
+      const h = vals[i][j] / max * ih;
+      if (h <= 0) return;
+      y -= h;
+      g += `<rect class="c-${s.c}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(h, 1).toFixed(1)}" rx="2"/>`;
+    });
+    if (i % every === 0) {
+      const d = keyToDate(grp[0]);
+      const lab = weekly ? d.toLocaleDateString([], { month: "short", day: "numeric" })
+        : groups.length <= 7 ? d.toLocaleDateString([], { weekday: "short" }) : String(d.getDate());
+      g += `<text class="ax" x="${(x + bw / 2).toFixed(1)}" y="${H - 8}" text-anchor="middle">${lab}</text>`;
+    }
+  });
+  return { weekly, svg: `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Bar chart of ${UNITS[S.ins.metric]} per day">${g}</svg>` };
+}
+
+function dayTimeline(D) {
+  const key = D.end, dayStart = keyToDate(key).getTime(), dayEnd = keyToDate(addDays(key, 1)).getTime(), span = dayEnd - dayStart;
+  const W = 360, L = 44, R = 10, iw = W - L - R;
+  const X = t => L + Math.min(1, Math.max(0, (t - dayStart) / span)) * iw;
+  let g = "";
+  for (let h = 0; h <= 24; h += 3) {
+    const x = L + h / 24 * iw;
+    const lab = h === 0 || h === 24 ? "12a" : h === 12 ? "12p" : (h % 12) + (h < 12 ? "a" : "p");
+    g += `<line class="grid" x1="${x}" x2="${x}" y1="12" y2="92"/><text class="ax" x="${x}" y="108" text-anchor="middle">${lab}</text>`;
+  }
+  g += `<text class="ax" x="${L - 8}" y="34" text-anchor="end">Sleep</text><text class="ax" x="${L - 8}" y="74" text-anchor="end">Feeds</text>`;
+  for (const e of S.events) {
+    const end = e.end || now();
+    if (e.start >= dayEnd || end <= dayStart) continue;
+    const x1 = X(e.start), x2 = X(end);
+    if (e.type === "sleep") g += `<rect class="c-S" x="${x1.toFixed(1)}" y="18" width="${Math.max(2, x2 - x1).toFixed(1)}" height="24" rx="3"/>`;
+    else g += `<rect class="c-${e.side}" x="${x1.toFixed(1)}" y="58" width="${Math.max(3, x2 - x1).toFixed(1)}" height="24" rx="2"/>`;
+  }
+  if (windowActive()) {
+    const f = hmToMin(S.ins.tFrom), t = hmToMin(S.ins.tTo);
+    const px = m => L + m / 1440 * iw;
+    const dim = (a, b) => { if (b > a) g += `<rect class="dim" x="${px(a).toFixed(1)}" y="12" width="${(px(b) - px(a)).toFixed(1)}" height="80"/>`; };
+    if (f !== null && t !== null) { if (f <= t) { dim(0, f); dim(t + 1, 1440); } else dim(t + 1, f); }
+  }
+  if (key === dayKey(now())) { const x = X(now()); g += `<line class="nowline" x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="12" y2="92"/>`; }
+  return `<svg viewBox="0 0 ${W} 120" role="img" aria-label="Timeline of sleep and feeds for the day">${g}</svg>`;
+}
+
+function viewInsights() {
+  const I = S.ins, D = insBuild(), today = D.today;
+  const fmtK = k => keyToDate(k).toLocaleDateString([], { month: "short", day: "numeric" });
+  const single = D.days.length === 1;
+  const label = I.mode === "day"
+    ? (D.end === today ? "Today" : keyToDate(D.end).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" }))
+    : `${fmtK(D.start)} to ${fmtK(D.end)}`;
+  let h = `<div class="seg" role="group" aria-label="Range">${MODES.map(([m, n]) => `<button data-act="ins-mode" data-m="${m}" aria-pressed="${I.mode === m}">${n}</button>`).join("")}</div>`;
+  h += `<div class="nav"><button data-act="ins-prev" aria-label="Earlier">‹</button><b>${label}</b><button data-act="ins-next" aria-label="Later" ${D.end >= today ? "disabled" : ""}>›</button></div>`;
+  if (I.mode === "custom") {
+    h += `<div class="daterow"><label>Start date<input id="ins-start" type="date" value="${D.start}" max="${today}"></label>
+      <label>End date<input id="ins-end" type="date" value="${D.end}" max="${today}"></label></div>`;
+  }
+  h += `<details class="filter" ${windowActive() ? "open" : ""}><summary>Time of day${windowActive() ? ": " + t12(I.tFrom) + " to " + t12(I.tTo) : ""}</summary>
+    <div class="daterow"><label>From<input id="ins-tfrom" type="time" value="${I.tFrom}"></label>
+    <label>To<input id="ins-tto" type="time" value="${I.tTo}"></label></div>
+    <p class="wx-s">Counts only feeds and sleeps that start in this window. Set From later than To for overnight, like 7:00 pm to 7:00 am.</p>
+    <button class="btn ghost" data-act="ins-reset">Reset to all day</button></details>`;
+
+  const nd = D.nd, lr = D.msL + D.msR, sfx = single ? "" : " per day";
+  h += `<div class="tiles">
+    <div class="tile"><div class="n">${fmtNum(D.feeds / nd)}</div><div class="l">Feeds${sfx}</div></div>
+    <div class="tile"><div class="n">${dur0(D.feedMs / nd)}</div><div class="l">Feeding time${sfx}</div></div>
+    <div class="tile"><div class="n">${D.avgGap ? fmtDur(D.avgGap) : "–"}</div><div class="l">Between feeds</div></div>
+    <div class="tile"><div class="n">${dur0(D.sleepMs / nd)}</div><div class="l">Sleep${sfx}</div></div>
+    <div class="tile"><div class="n">${D.longestSleep ? fmtDur(D.longestSleep) : "–"}</div><div class="l">Longest sleep</div></div>
+    <div class="tile"><div class="n">${lr ? Math.round(D.msL / lr * 100) + " / " + Math.round(D.msR / lr * 100) + "%" : "–"}</div><div class="l">Left / right</div></div>
+    ${D.ml ? `<div class="tile"><div class="n">${D.ml} ml</div><div class="l">Bottle total</div></div>` : ""}
+  </div>`;
+
+  if (!D.evs.length && !(I.mode === "day")) return h + `<p class="empty">Nothing logged in this range.</p>`;
+
+  if (I.mode === "day") {
+    h += `<div class="chart"><p class="cap">Sleep and feeds through the day</p>${dayTimeline(D)}
+      <div class="legend"><span><i class="lg-S"></i>Sleep</span><span><i class="lg-L"></i>Left</span><span><i class="lg-R"></i>Right</span><span><i class="lg-B"></i>Bottle</span></div></div>`;
+    const b = D.by.get(D.end);
+    h += `<section class="day"><h2>Feed times</h2><p class="tot">${b.feeds.length} feed${b.feeds.length === 1 ? "" : "s"}</p>
+      ${b.feeds.length ? b.feeds.map(entryHtml).join("") : `<p class="empty">No feeds logged this day.</p>`}</section>`;
+    return h;
+  }
+
+  const ch = barChart(D);
+  h += `<div class="seg" role="group" aria-label="Chart">${METRICS.map(([m, n]) => `<button data-act="ins-metric" data-m="${m}" aria-pressed="${I.metric === m}">${n}</button>`).join("")}</div>
+    <div class="chart"><p class="cap">${ch.weekly ? "Daily average for each week" : "Each day"}: ${UNITS[I.metric]}</p>${ch.svg}
+    <div class="legend">${SERIES[I.metric].map(s => `<span><i class="lg-${s.c}"></i>${s.name}</span>`).join("")}</div></div>`;
+
+  const rows = D.days.filter(k => k >= D.firstKey && k <= today).reverse().map(k => {
+    const b = D.by.get(k), n = b.fL + b.fR + b.fB;
+    return `<button class="drow" data-act="ins-day" data-key="${k}"><span>${keyToDate(k).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })}</span><span>${n}</span><span>${dur0(b.mL + b.mR)}</span><span>${dur0(b.sl)}</span></button>`;
+  });
+  h += `<section class="day"><h2>Daily summary</h2><p class="tot">Tap a day to see its feed times.</p>
+    <div class="drow h"><span>Day</span><span>Feeds</span><span>Feeding</span><span>Sleep</span></div>${rows.join("")}</section>`;
+  return h;
+}
+
+const SYNC_TEXT = { live: "Synced", pending: "Saving…", local: "Only on this phone", error: "Can’t reach sync", offline: "Offline" };
+function inviteLink() {
+  return `${location.origin}${location.pathname}#join=${S.code}&baby=${encodeURIComponent(S.baby)}`;
+}
+function viewSettings() {
+  const cloud = !!FIREBASE_CONFIG;
+  return `
+  <section class="set">
+    <h2>This phone</h2>
+    <label>Your name<input id="set-me" type="text" value="${esc(S.me)}" autocomplete="given-name"></label>
+    <label>Baby’s name<input id="set-baby" type="text" value="${esc(S.baby)}"></label>
+  </section>
+  <section class="set">
+    <h2>Sharing</h2>
+    <p>${cloud ? `Status: <b>${SYNC_TEXT[S.status] || S.status}</b>. Both phones see the same feeds and sleeps.` :
+      `Sync is off, so entries stay on this phone. Add your Firebase config at the top of index.html to share with your partner.`}</p>
+    <div class="inline">
+      <button class="btn" data-act="share-link">Share invite link</button>
+      <button class="btn" data-act="copy-link">Copy link</button>
+    </div>
+    <label>Join from a link or code<input id="join-in" type="text" placeholder="Paste the invite link"></label>
+    <button class="btn wide" data-act="join">Join</button>
+  </section>
+  <section class="set">
+    <h2>Feed check-ins</h2>
+    <label class="check"><input id="set-awake" type="checkbox" ${S.keepAwake ? "checked" : ""}>Keep the screen on while a feed is running</label>
+    <p>Check-ins appear on any phone that has the app open. Keeping the screen on is the most reliable way to catch a forgotten timer.</p>
+    <label class="check"><input id="set-notify" type="checkbox" ${S.notify ? "checked" : ""}>Also try a notification when the app is in the background</label>
+    <p>Phones often pause web apps in the background, so this isn’t guaranteed.</p>
+  </section>
+  <section class="set">
+    <h2>Your data</h2>
+    <button class="btn wide" data-act="export">Export everything as CSV</button>
+  </section>`;
+}
+
+function render() {
+  $("#baby").textContent = S.baby || "Baby";
+  document.title = (S.baby || "Baby") + " · Baby Log";
+  document.querySelectorAll("#tabs button").forEach(b => {
+    if (b.dataset.tab === S.tab) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
+  });
+  const v = { feed: viewFeed, sleep: viewSleep, log: viewLog, settings: viewSettings }[S.tab];
+  $("#view").innerHTML = v();
+  paintStatus();
+  paintWeather();
+  tick();
+}
+function paintStatus() {
+  const el = $("#sync");
+  el.className = "sync " + S.status;
+  el.textContent = SYNC_TEXT[S.status] || "";
+}
+
+/* ---------- Entry sheet (add / edit) ---------- */
+function openSheet(id, opt = {}) {
+  const isNew = !id;
+  const ev = isNew
+    ? Object.assign({ type: "feed", side: "L", start: now() - 10 * 60000, end: now(), ml: null }, opt.preset || {})
+    : S.events.find(e => e.id === id);
+  if (!ev) return;
+  const kind = ev.type === "sleep" ? "S" : ev.side;
+  const endVal = ev.end || (opt.fillEnd ? now() : null);
+  const d = $("#sheet");
+  d.innerHTML = `<div class="sheet-in">
+    <h2>${isNew ? "Add an entry" : "Edit entry"}</h2>
+    <label>What<select id="f-kind">
+      <option value="L">Left side feed</option><option value="R">Right side feed</option>
+      <option value="B">Bottle</option><option value="S">Sleep</option></select></label>
+    <label>Start<input id="f-start" type="datetime-local" value="${toLocalInput(ev.start)}"></label>
+    <label id="f-end-wrap">End (leave empty if still running)<input id="f-end" type="datetime-local" value="${endVal ? toLocalInput(endVal) : ""}"></label>
+    <label id="f-ml-wrap">Amount (ml)<input id="f-ml" type="number" inputmode="numeric" min="0" value="${ev.ml ?? ""}"></label>
+    <p class="err" id="f-err" role="alert"></p>
+    <div class="stack">
+      <button class="btn solid" id="f-save">Save</button>
+      ${isNew ? "" : `<button class="btn danger" id="f-del">Delete entry</button>`}
+      <button class="btn ghost" id="f-cancel">Cancel</button>
+    </div></div>`;
+  $("#f-kind", d).value = kind;
+  const sync = () => { const k = $("#f-kind", d).value; $("#f-ml-wrap", d).hidden = k !== "B"; $("#f-end-wrap", d).hidden = k === "B"; };
+  sync();
+  $("#f-kind", d).addEventListener("change", sync);
+  $("#f-cancel", d).addEventListener("click", () => d.close());
+  $("#f-save", d).addEventListener("click", () => {
+    const k = $("#f-kind", d).value;
+    const start = fromLocalInput($("#f-start", d).value);
+    const end = k === "B" ? start : fromLocalInput($("#f-end", d).value);
+    const err = $("#f-err", d);
+    if (!start) { err.textContent = "Add a start time."; return; }
+    if (end !== null && end < start) { err.textContent = "The end time is before the start time."; return; }
+    const patch = {
+      type: k === "S" ? "sleep" : "feed", side: k === "S" ? null : k, start, end,
+      ml: k === "B" ? (parseInt($("#f-ml", d).value, 10) || null) : null
+    };
+    if (isNew) store.add({ ...patch, by: S.me, ack: 0 }); else store.update(id, patch);
+    d.close();
+    toast(isNew ? "Entry added" : "Saved");
+  });
+  const del = $("#f-del", d);
+  if (del) del.addEventListener("click", () => {
+    if (del.dataset.armed) { const copy = { ...ev }; delete copy.id; store.remove(id); d.close(); toast("Entry deleted", { label: "Undo", fn: () => store.add(copy) }); return; }
+    del.dataset.armed = "1"; del.textContent = "Tap again to delete";
+  });
+  d.showModal();
+}
+$("#sheet").addEventListener("click", e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
+$("#summary").addEventListener("click", e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
+
+/* ---------- Feed check-ins ---------- */
+let promptKey = null;
+function dueCheckin() {
+  const a = activeFeed(); if (!a) return null;
+  const mins = (now() - a.start) / 60000;
+  let due = 0;
+  for (const m of CHECKIN_MINUTES) if (mins >= m && (a.ack || 0) < m) due = m;
+  return due ? { ev: a, mins: due } : null;
+}
+let audioCtx = null;
+function unlockAudio() {
+  if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch {} }
+  if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+}
+document.addEventListener("pointerdown", unlockAudio);
+function beep() {
+  if (!audioCtx) return;
+  [0, 0.35].forEach(t => {
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = "sine"; o.frequency.value = 880;
+    g.gain.setValueAtTime(0.0001, audioCtx.currentTime + t);
+    g.gain.exponentialRampToValueAtTime(0.25, audioCtx.currentTime + t + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + t + 0.25);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(audioCtx.currentTime + t); o.stop(audioCtx.currentTime + t + 0.3);
+  });
+}
+function showCheckin(due) {
+  const dlg = $("#checkin");
+  const elapsed = now() - due.ev.start;
+  dlg.dataset.id = due.ev.id; dlg.dataset.mins = due.mins;
+  $("#ci-body").textContent = `${S.baby || "Baby"} has been on the ${sideName(due.ev.side).toLowerCase()} side for ${fmtDur(elapsed)}.`;
+  if (!dlg.open) dlg.showModal();
+  try { navigator.vibrate && navigator.vibrate([250, 120, 250]); } catch {}
+  beep();
+  if (S.notify && document.hidden && "Notification" in window && Notification.permission === "granted" && navigator.serviceWorker) {
+    navigator.serviceWorker.ready.then(r => r.showNotification("Still feeding?", {
+      body: `${sideName(due.ev.side)} side · ${fmtDur(elapsed)}`, tag: "checkin", renotify: true, vibrate: [250, 120, 250]
+    })).catch(() => {});
+  }
+}
+
+/* ---------- Keep screen awake during feeds ---------- */
+let wake = null, waking = false;
+async function keepAwake() {
+  const need = S.keepAwake && !!activeFeed() && !document.hidden;
+  try {
+    if (need && !wake && !waking && "wakeLock" in navigator) {
+      waking = true;
+      wake = await navigator.wakeLock.request("screen");
+      wake.addEventListener("release", () => { wake = null; });
+      waking = false;
+    } else if (!need && wake) { const w = wake; wake = null; await w.release(); }
+  } catch { wake = null; waking = false; }
+}
+
+/* ---------- Ticker ---------- */
+function tick() {
+  const t = now();
+  document.querySelectorAll("[data-since]").forEach(el => { el.textContent = clock(t - Number(el.dataset.since)); });
+  document.querySelectorAll("[data-ago]").forEach(el => { el.textContent = ago(t - Number(el.dataset.ago)); });
+  const due = dueCheckin(), dlg = $("#checkin");
+  if (due) {
+    const key = due.ev.id + ":" + due.mins;
+    if (key !== promptKey) { promptKey = key; showCheckin(due); }
+  } else if (dlg.open) dlg.close();
+  keepAwake();
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { tick(); fetchWeather(); } });
+
+/* ---------- CSV ---------- */
+function exportCsv() {
+  const rows = [["date", "type", "side", "start", "end", "minutes", "ml", "logged_by"]];
+  for (const e of [...S.events].reverse()) {
+    const mins = e.end ? Math.round((e.end - e.start) / 60000) : "";
+    rows.push([dayKey(e.start), e.type, e.side ? sideName(e.side) : "", new Date(e.start).toISOString(),
+      e.end ? new Date(e.end).toISOString() : "", mins, e.ml || "", e.by || ""]);
+  }
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+  a.download = `baby-log-${dayKey(now())}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+/* ---------- Joining / sharing ---------- */
+function joinFrom(text) {
+  let code = (text || "").trim();
+  const m = code.match(/join=([A-Za-z0-9]+)/);
+  if (m) code = m[1];
+  if (!/^[A-Za-z0-9]{12,}$/.test(code)) { toast("That doesn’t look like an invite link."); return; }
+  const b = code !== text && text.match(/baby=([^&]+)/);
+  LS.set("bl_code", code);
+  if (b) LS.set("bl_baby", decodeURIComponent(b[1]));
+  location.reload();
+}
+async function copyText(t) {
+  try { await navigator.clipboard.writeText(t); toast("Copied"); } catch { toast("Copy failed. Long-press the link to copy."); }
+}
+
+/* ---------- Events ---------- */
+document.addEventListener("click", e => {
+  const tabBtn = e.target.closest("[data-tab]");
+  if (tabBtn) { S.tab = tabBtn.dataset.tab; render(); window.scrollTo(0, 0); return; }
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  const a = b.dataset.act;
+  const ciDlg = $("#checkin");
+  switch (a) {
+    case "start-feed": startFeed(b.dataset.side); break;
+    case "stop-feed": { const f = activeFeed(); if (f) stopFeed(f.id); break; }
+    case "switch-side": switchSide(); break;
+    case "bottle": openSheet(null, { preset: { type: "feed", side: "B", start: now(), end: now() } }); break;
+    case "start-sleep": startSleep(); break;
+    case "stop-sleep": { const s = activeSleep(); if (s) stopSleep(s.id); break; }
+    case "edit": openSheet(b.dataset.id); break;
+    case "add-past": openSheet(null); break;
+    case "export": exportCsv(); break;
+    case "copy-link": copyText(inviteLink()); break;
+    case "share-link":
+      if (navigator.share) navigator.share({ title: "Baby Log", text: "Join our baby log", url: inviteLink() }).catch(() => {});
+      else copyText(inviteLink());
+      break;
+    case "join": joinFrom($("#join-in").value); break;
+    case "ci-yes": store.update(ciDlg.dataset.id, { ack: Number(ciDlg.dataset.mins) }); ciDlg.close(); break;
+    case "ci-stop": ciDlg.close(); stopFeed(ciDlg.dataset.id); break;
+    case "ci-fix": ciDlg.close(); openSheet(ciDlg.dataset.id, { fillEnd: true }); break;
+    case "sum-feed": $("#summary").close(); S.tab = "feed"; startFeed(b.dataset.side); render(); break;
+    case "sum-sleep": $("#summary").close(); S.tab = "sleep"; startSleep(); render(); break;
+    case "sum-gofeed": $("#summary").close(); S.tab = "feed"; render(); break;
+    case "sum-resume": store.update(b.dataset.id, { end: null }); $("#summary").close(); break;
+    case "sum-fix": $("#summary").close(); openSheet(b.dataset.id); break;
+    case "sum-done": $("#summary").close(); break;
+    case "logview": S.logView = b.dataset.v; render(); window.scrollTo(0, 0); break;
+    case "ins-mode": {
+      const m = b.dataset.m;
+      if (m === "custom") { const r = insRange(); S.ins.start = r.start; S.ins.end = r.end; }
+      S.ins.mode = m; render(); break;
+    }
+    case "ins-metric": S.ins.metric = b.dataset.m; render(); break;
+    case "ins-prev": insShift(-1); break;
+    case "ins-next": insShift(1); break;
+    case "ins-day": S.ins.mode = "day"; S.ins.end = b.dataset.key; render(); window.scrollTo(0, 0); break;
+    case "ins-reset": S.ins.tFrom = "00:00"; S.ins.tTo = "23:59"; render(); break;
+    case "welcome-save": {
+      S.me = $("#w-me").value.trim() || "Me";
+      S.baby = $("#w-baby").value.trim() || S.baby || "Baby";
+      LS.set("bl_me", S.me); LS.set("bl_baby", S.baby);
+      $("#welcome").close(); render(); break;
+    }
+  }
+});
+$("#view").addEventListener("change", async e => {
+  const id = e.target.id;
+  if (id === "ins-start" && e.target.value) { S.ins.start = e.target.value; render(); return; }
+  if (id === "ins-end" && e.target.value) { S.ins.end = e.target.value; render(); return; }
+  if (id === "ins-tfrom") { S.ins.tFrom = e.target.value || "00:00"; render(); return; }
+  if (id === "ins-tto") { S.ins.tTo = e.target.value || "23:59"; render(); return; }
+  if (e.target.id === "set-me") { S.me = e.target.value.trim(); LS.set("bl_me", S.me); toast("Saved"); }
+  if (e.target.id === "set-baby") { S.baby = e.target.value.trim() || "Baby"; LS.set("bl_baby", S.baby); $("#baby").textContent = S.baby; toast("Saved"); }
+  if (e.target.id === "set-awake") { S.keepAwake = e.target.checked; LS.set("bl_awake", S.keepAwake); keepAwake(); }
+  if (e.target.id === "set-notify") {
+    if (!e.target.checked) { S.notify = false; LS.set("bl_notify", false); return; }
+    if (!("Notification" in window)) { e.target.checked = false; toast("Notifications aren’t supported here."); return; }
+    const p = await Notification.requestPermission();
+    S.notify = p === "granted"; LS.set("bl_notify", S.notify);
+    if (!S.notify) { e.target.checked = false; toast("Notifications are blocked in your browser settings."); }
+  }
+});
+
+/* ---------- Weather (Open-Meteo, no API key) ---------- */
+const WX_CODES = { 0: "Clear", 1: "Mostly clear", 2: "Partly cloudy", 3: "Overcast", 45: "Fog", 48: "Freezing fog",
+  51: "Light drizzle", 53: "Drizzle", 55: "Heavy drizzle", 56: "Freezing drizzle", 57: "Freezing drizzle",
+  61: "Light rain", 63: "Rain", 65: "Heavy rain", 66: "Freezing rain", 67: "Freezing rain",
+  71: "Light snow", 73: "Snow", 75: "Heavy snow", 77: "Snow grains", 80: "Rain showers", 81: "Rain showers",
+  82: "Heavy rain showers", 85: "Snow showers", 86: "Heavy snow showers", 95: "Thunderstorm", 96: "Thunderstorm with hail", 99: "Thunderstorm with hail" };
+const wxText = c => WX_CODES[c] || "Unknown";
+const deg = v => (Math.round(v) + "°").replace("-", "−");
+const hour12 = s => { const h = Number(s.slice(11, 13)); return (h % 12 || 12) + (h < 12 ? " am" : " pm"); };
+const time12 = s => { const h = Number(s.slice(11, 13)); return `${h % 12 || 12}:${s.slice(14, 16)} ${h < 12 ? "am" : "pm"}`; };
+
+async function fetchWeather(force) {
+  if (!force && S.wx && now() - S.wx.t < 20 * 60000) return;
+  const url = "https://api.open-meteo.com/v1/forecast?latitude=" + WX.lat + "&longitude=" + WX.lon +
+    "&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,wind_gusts_10m" +
+    "&hourly=temperature_2m,apparent_temperature,weather_code,precipitation_probability" +
+    "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset" +
+    "&timezone=" + encodeURIComponent(WX.tz) + "&forecast_days=5";
+  const ctl = new AbortController();
+  const to = setTimeout(() => ctl.abort(), 10000);
+  try {
+    const r = await fetch(url, { signal: ctl.signal });
+    if (!r.ok) throw new Error("Weather " + r.status);
+    S.wx = { t: now(), data: await r.json() };
+    LS.set("bl_wx", S.wx);
+    paintWeather();
+    if (S.tab === "sleep") render();
+  } catch (err) { console.warn(err); }
+  finally { clearTimeout(to); }
+}
+function paintWeather() {
+  const el = $("#wx-chip"), d = S.wx && S.wx.data;
+  if (!d || !d.current) { el.hidden = true; return; }
+  el.hidden = false;
+  el.innerHTML = `${deg(d.current.temperature_2m)} <small>feels ${deg(d.current.apparent_temperature)}</small>`;
+}
+function weatherCard() {
+  const d = S.wx && S.wx.data;
+  if (!d || !d.current) {
+    return `<section class="wx"><h2>${esc(WX.place)} weather</h2><p class="wx-s">Weather isn’t available yet. It loads when the phone is online.</p></section>`;
+  }
+  const c = d.current, dy = d.daily, hr = d.hourly;
+  const start = Math.max(0, hr.time.findIndex(x => x >= c.time.slice(0, 13) + ":00"));
+  let hours = "";
+  for (let i = start; i < Math.min(start + 12, hr.time.length); i++) {
+    const p = hr.precipitation_probability[i];
+    hours += `<div class="wx-h"><span class="wx-hh">${hour12(hr.time[i])}</span><b>${deg(hr.temperature_2m[i])}</b>
+      <span class="wx-fl">feels ${deg(hr.apparent_temperature[i])}</span><span class="wx-pp">${p >= 20 ? p + "%" : ""}</span></div>`;
+  }
+  let days = "";
+  dy.time.forEach((t, i) => {
+    const [Y, M, D] = t.split("-").map(Number);
+    const name = i === 0 ? "Today" : new Date(Y, M - 1, D).toLocaleDateString([], { weekday: "short" });
+    const p = dy.precipitation_probability_max[i];
+    days += `<div class="wx-d"><span>${name}</span><span class="wx-dc">${wxText(dy.weather_code[i])}${p >= 20 ? ", " + p + "%" : ""}</span>
+      <b>${deg(dy.temperature_2m_max[i])} / ${deg(dy.temperature_2m_min[i])}</b></div>`;
+  });
+  return `<section class="wx">
+    <h2>${esc(WX.place)} weather</h2>
+    <div class="wx-now"><div class="wx-t">${deg(c.temperature_2m)}</div>
+      <div><p class="wx-c">${wxText(c.weather_code)}</p>
+      <p class="wx-s">Feels like ${deg(c.apparent_temperature)}. Wind ${Math.round(c.wind_speed_10m)} km/h, gusts ${Math.round(c.wind_gusts_10m)}.</p></div></div>
+    <p class="wx-s">Today: high ${deg(dy.temperature_2m_max[0])}, low ${deg(dy.temperature_2m_min[0])}. Sunrise ${time12(dy.sunrise[0])}, sunset ${time12(dy.sunset[0])}.</p>
+    <div class="wx-hours">${hours}</div>
+    <div class="wx-days">${days}</div>
+    <p class="wx-up">Updated ${ago(now() - S.wx.t)}. Data from Open-Meteo.</p>
+  </section>`;
+}
+
+/* ---------- Boot ---------- */
+async function boot() {
+  const h = new URLSearchParams(location.hash.slice(1));
+  if (h.get("join")) {
+    S.code = h.get("join"); LS.set("bl_code", S.code);
+    if (h.get("baby")) { S.baby = h.get("baby"); LS.set("bl_baby", S.baby); }
+    history.replaceState(null, "", location.pathname + location.search);
+  }
+  if (!S.code) { S.code = newCode(); LS.set("bl_code", S.code); }
+
+  if (FIREBASE_CONFIG) {
+    try { await loadFirebase(); store = makeCloudStore(S.code); }
+    catch (err) { console.error(err); store = makeLocalStore(S.code); S.status = "error"; toast("Sync didn’t load. Entries are saved on this phone only."); }
+  } else store = makeLocalStore(S.code);
+
+  store.subscribe(evs => {
+    S.events = evs;
+    const ae = document.activeElement;
+    const typing = ae && ae.tagName === "INPUT" && $("#view").contains(ae);
+    if (S.tab === "settings" || typing) { paintStatus(); tick(); } else render();
+  }, st => { if (!(S.status === "error" && st === "local")) S.status = st; paintStatus(); });
+
+  render();
+  fetchWeather();
+  setInterval(() => fetchWeather(), 5 * 60000);
+  if (!S.me) { $("#w-baby").value = S.baby === "Baby" ? "" : S.baby; $("#welcome").showModal(); }
+  setInterval(tick, 1000);
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+boot();
+</script>
+</body>
+</html>
