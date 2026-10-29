@@ -200,6 +200,13 @@ details.filter .btn{margin-top:6px;width:100%}
 .drow{display:grid;grid-template-columns:1fr 46px 70px 70px;gap:6px;width:100%;text-align:left;border:0;background:var(--surface);border-radius:12px;padding:11px 12px;margin-bottom:6px;font-size:.93rem;align-items:center}
 .drow.h{background:none;color:var(--muted);font-size:.8rem;padding:2px 12px;margin-bottom:2px}
 .drow span:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.clock-wrap{max-width:360px;margin:0 auto}
+.trk{fill:none;stroke:var(--raised)}
+.arc-S{fill:none;stroke:var(--sleep)} .arc-L{fill:none;stroke:var(--left)} .arc-R{fill:none;stroke:var(--right)} .arc-B{fill:none;stroke:var(--bottle)}
+.dimarc{fill:none;stroke:var(--surface);opacity:.72}
+.cl-d{fill:var(--muted);font-size:12px;font-family:"Figtree",system-ui,sans-serif}
+.cl-big{fill:var(--ink);font:700 26px "Bricolage Grotesque",system-ui,sans-serif}
+.cl-s{fill:var(--muted);font-size:12px;font-family:"Figtree",system-ui,sans-serif}
 .top-r{display:grid;justify-items:end;gap:2px}
 .wx-chip{background:none;border:0;padding:0;font-weight:600;font-size:1rem;color:var(--ink)}
 .wx-chip small{color:var(--muted);font-weight:400;font-size:.8rem}
@@ -261,9 +268,9 @@ details.filter .btn{margin-top:6px;width:100%}
     <h2 id="ci-title">Still feeding?</h2>
     <p id="ci-body"></p>
     <div class="stack">
-      <button class="btn solid" data-act="ci-yes">Still feeding</button>
-      <button class="btn danger" data-act="ci-stop">Stop the timer now</button>
-      <button class="btn ghost" data-act="ci-fix">Set the end time</button>
+      <button class="btn solid" id="ci-yes" data-act="ci-yes">Still feeding</button>
+      <button class="btn danger" id="ci-stop" data-act="ci-stop">Stop the timer now</button>
+      <button class="btn ghost" id="ci-fix" data-act="ci-fix">Set the end time</button>
     </div>
   </div>
 </dialog>
@@ -324,11 +331,13 @@ function clock(ms) {
 const clockTime = ms => new Date(ms).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 const toLocalInput = ms => { const d = new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 const fromLocalInput = s => s ? new Date(s).getTime() : null;
+const cutMin = () => { const m = /^(\d\d):(\d\d)$/.exec(S.dayStart || ""); return m ? Number(m[1]) * 60 + Number(m[2]) : 0; };
+const bdKey = ms => dayKey(ms - cutMin() * 60000);   // "baby day": runs from the chosen cut-off time to the same time next day
 const dayKey = ms => { const d = new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
 function dayLabel(key) {
-  const y = new Date(); y.setDate(y.getDate() - 1);
-  if (key === dayKey(now())) return "Today";
-  if (key === dayKey(y.getTime())) return "Yesterday";
+  const t = bdKey(now());
+  if (key === t) return "Today";
+  if (key === addDays(t, -1)) return "Yesterday";
   const [Y, M, D] = key.split("-").map(Number);
   return new Date(Y, M - 1, D).toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" });
 }
@@ -364,8 +373,10 @@ const S = {
   keepAwake: LS.get("bl_awake", true),
   notify: LS.get("bl_notify", false),
   wx: LS.get("bl_wx", null),
+  sleepCI: LS.get("bl_sleepci", 60),
+  dayStart: LS.get("bl_daystart", "07:00"),
   logView: "entries",
-  ins: { mode: "week", end: dayKey(now()), start: null, metric: "feedMin", tFrom: "00:00", tTo: "23:59" }
+  ins: { mode: "day", end: dayKey(now()), start: null, metric: "feedMin", tFrom: "00:00", tTo: "23:59" }
 };
 let store = null;
 
@@ -433,7 +444,7 @@ function stats(list) {
   }
   return r;
 }
-const todayEvents = () => S.events.filter(e => dayKey(e.start) === dayKey(now()));
+const todayEvents = () => S.events.filter(e => bdKey(e.start) === bdKey(now()));
 
 /* ---------- Actions ---------- */
 function startFeed(side) {
@@ -570,6 +581,7 @@ function viewSleep() {
       <p class="lab">Asleep since ${clockTime(sl.start)}${sl.by ? " · " + esc(sl.by) : ""}</p>
       <div class="big" data-since="${sl.start}">0:00</div>
       <div class="row"><button class="btn stop" data-act="stop-sleep">Wake up</button></div>
+      ${S.sleepCI ? `<p class="hint">Check-ins every ${S.sleepCI} minutes.</p>` : ""}
     </section>`;
   } else {
     const last = lastSleepEnded();
@@ -619,7 +631,7 @@ function viewEntries() {
   if (!S.events.length) return h + `<p class="empty">Nothing logged yet. Feeds and sleeps will show up here.</p>`;
   const groups = new Map();
   for (const e of S.events) {
-    const k = dayKey(e.start);
+    const k = bdKey(e.start);
     if (!groups.has(k)) groups.set(k, []);
     groups.get(k).push(e);
   }
@@ -664,7 +676,7 @@ function niceMax(v) {
 const fmtNum = v => (Math.abs(v - Math.round(v)) < 0.05 || v >= 10) ? String(Math.round(v)) : v.toFixed(1);
 
 function insRange() {
-  const I = S.ins, today = dayKey(now());
+  const I = S.ins, today = bdKey(now());
   let end = I.end > today ? today : I.end, start;
   if (I.mode === "day") start = end;
   else if (I.mode === "week") start = addDays(end, -6);
@@ -674,26 +686,27 @@ function insRange() {
   return { start, end };
 }
 function insShift(dir) {
-  const I = S.ins, r = insRange(), today = dayKey(now());
+  const I = S.ins, r = insRange(), today = bdKey(now());
   const step = I.mode === "day" ? 1 : I.mode === "week" ? 7 : I.mode === "month" ? 30 : I.mode === "quarter" ? 90 : daysBetween(r.start, r.end) + 1;
   if (I.mode === "custom") { I.start = addDays(r.start, dir * step); I.end = addDays(r.end, dir * step); }
   else { I.end = addDays(r.end, dir * step); if (I.end > today) I.end = today; }
   render();
 }
 function insBuild() {
-  const { start, end } = insRange(), today = dayKey(now());
+  const { start, end } = insRange(), today = bdKey(now());
   const days = [];
   for (let k = start, n = 0; k <= end && n < 800; k = addDays(k, 1), n++) days.push(k);
   const by = new Map(days.map(k => [k, { k, fL: 0, fR: 0, fB: 0, mL: 0, mR: 0, ml: 0, sl: 0, ns: 0, feeds: [] }]));
-  const startMs = keyToDate(start).getTime(), endMs = keyToDate(addDays(end, 1)).getTime();
+  const cutMs = cutMin() * 60000;
+  const startMs = keyToDate(start).getTime() + cutMs, endMs = keyToDate(addDays(end, 1)).getTime() + cutMs;
   const evs = S.events.filter(e => e.start >= startMs && e.start < endMs && inWindow(e.start)).sort((a, b) => a.start - b.start);
   let firstAll = Infinity;
   for (const e of S.events) if (e.start < firstAll) firstAll = e.start;
-  const firstKey = isFinite(firstAll) ? dayKey(firstAll) : today;
+  const firstKey = isFinite(firstAll) ? bdKey(firstAll) : today;
   const feedStarts = [];
   let longestSleep = 0, msL = 0, msR = 0, ml = 0, sleepMs = 0, feeds = 0, feedMs = 0;
   for (const e of evs) {
-    const b = by.get(dayKey(e.start)); if (!b) continue;
+    const b = by.get(bdKey(e.start)); if (!b) continue;
     const dur = (e.end || now()) - e.start;
     if (e.type === "sleep") { b.sl += dur; b.ns++; sleepMs += dur; if (dur > longestSleep) longestSleep = dur; continue; }
     b.feeds.push(e); feeds++; feedStarts.push(e.start);
@@ -743,14 +756,76 @@ function barChart(D) {
   return { weekly, svg: `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Bar chart of ${UNITS[S.ins.metric]} per day">${g}</svg>` };
 }
 
+const hourLab = (base, h) => {
+  const d = new Date(base + h * 3600000), hr = d.getHours(), mn = d.getMinutes();
+  return (hr % 12 || 12) + (mn ? ":" + pad(mn) : "") + (hr < 12 ? "a" : "p");
+};
+// Minute spans (since the day's cut-off) that fall outside the time-of-day filter
+function dimSpans() {
+  if (!windowActive()) return [];
+  const f = hmToMin(S.ins.tFrom), t = hmToMin(S.ins.tTo), cut = cutMin();
+  if (f === null || t === null) return [];
+  const outs = f <= t ? [[0, f], [t + 1, 1440]] : [[t + 1, f]];
+  const spans = [];
+  for (const [a, b] of outs) {
+    if (b <= a) continue;
+    const sa = ((a - cut) % 1440 + 1440) % 1440, len = b - a;
+    if (sa + len > 1440) { spans.push([sa, 1440]); spans.push([0, sa + len - 1440]); } else spans.push([sa, sa + len]);
+  }
+  return spans;
+}
+
+function dayClock(D) {
+  const key = D.end, cut = cutMin();
+  const dayStart = keyToDate(key).getTime() + cut * 60000, dayEnd = keyToDate(addDays(key, 1)).getTime() + cut * 60000, span = dayEnd - dayStart;
+  const W = 340, C = 170, RS = 116, RF = 90, SW = 22;
+  const pt = (r, deg) => { const a = deg * Math.PI / 180; return [C + r * Math.sin(a), C - r * Math.cos(a)]; };
+  const ang = t => Math.min(1, Math.max(0, (t - dayStart) / span)) * 360;
+  const arc = (r, a1, a2) => {
+    a2 = Math.min(Math.max(a2, a1 + 0.4), a1 + 359.9);
+    const [x1, y1] = pt(r, a1), [x2, y2] = pt(r, a2);
+    return `M${x1.toFixed(2)} ${y1.toFixed(2)}A${r} ${r} 0 ${a2 - a1 > 180 ? 1 : 0} 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`;
+  };
+  let g = `<circle class="trk" cx="${C}" cy="${C}" r="${RS}" stroke-width="${SW}"/><circle class="trk" cx="${C}" cy="${C}" r="${RF}" stroke-width="${SW}"/>`;
+  for (let h = 0; h < 24; h++) {
+    const big = h % 3 === 0, [x1, y1] = pt(big ? 131 : 129, h * 15), [x2, y2] = pt(big ? 138 : 133, h * 15);
+    g += `<line class="grid" x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/>`;
+    if (big) { const [lx, ly] = pt(150, h * 15); g += `<text class="ax" x="${lx.toFixed(1)}" y="${(ly + 3.5).toFixed(1)}" text-anchor="middle">${hourLab(dayStart, h)}</text>`; }
+  }
+  let feeds = 0, feedMs = 0, sleepMs = 0;
+  for (const e of S.events) {
+    const end = e.end || now();
+    if (e.start >= dayEnd || end <= dayStart) continue;
+    const s0 = Math.max(e.start, dayStart), e0 = Math.min(end, dayEnd);
+    if (e.type === "sleep") { sleepMs += e0 - s0; g += `<path class="arc-S" stroke-width="${SW}" d="${arc(RS, ang(s0), ang(e0))}"/>`; }
+    else {
+      if (e.start >= dayStart) feeds++;
+      if (e.side !== "B") feedMs += e0 - s0;
+      const a1 = ang(s0), a2 = Math.max(ang(e0), a1 + 3);
+      g += `<path class="arc-${e.side}" stroke-width="${SW}" d="${arc(RF, a1, a2)}"/>`;
+    }
+  }
+  for (const [a, b] of dimSpans()) g += `<path class="dimarc" stroke-width="56" d="${arc(103, a / 1440 * 360, b / 1440 * 360)}"/>`;
+  if (key === bdKey(now())) {
+    const a = ang(now()), [hx, hy] = pt(133, a), [ix, iy] = pt(66, a);
+    g += `<line class="nowline" x1="${ix.toFixed(1)}" y1="${iy.toFixed(1)}" x2="${hx.toFixed(1)}" y2="${hy.toFixed(1)}"/><circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="3.5" fill="var(--ink)"/>`;
+  }
+  const dl = key === bdKey(now()) ? "Today" : keyToDate(key).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
+  g += `<text class="cl-d" x="${C}" y="${C - 24}" text-anchor="middle">${dl}</text>
+    <text class="cl-big" x="${C}" y="${C + 4}" text-anchor="middle">${feeds} feed${feeds === 1 ? "" : "s"}</text>
+    <text class="cl-s" x="${C}" y="${C + 24}" text-anchor="middle">${dur0(feedMs)} feeding</text>
+    <text class="cl-s" x="${C}" y="${C + 41}" text-anchor="middle">${dur0(sleepMs)} sleep</text>`;
+  return `<svg viewBox="0 0 ${W} ${W}" role="img" aria-label="24 hour clock of sleep and feeds. ${feeds} feeds, ${fmtDur(feedMs)} feeding, ${fmtDur(sleepMs)} sleep.">${g}</svg>`;
+}
+
 function dayTimeline(D) {
-  const key = D.end, dayStart = keyToDate(key).getTime(), dayEnd = keyToDate(addDays(key, 1)).getTime(), span = dayEnd - dayStart;
+  const key = D.end, dayStart = keyToDate(key).getTime() + cutMin() * 60000, dayEnd = keyToDate(addDays(key, 1)).getTime() + cutMin() * 60000, span = dayEnd - dayStart;
   const W = 360, L = 44, R = 10, iw = W - L - R;
   const X = t => L + Math.min(1, Math.max(0, (t - dayStart) / span)) * iw;
   let g = "";
   for (let h = 0; h <= 24; h += 3) {
     const x = L + h / 24 * iw;
-    const lab = h === 0 || h === 24 ? "12a" : h === 12 ? "12p" : (h % 12) + (h < 12 ? "a" : "p");
+    const lab = hourLab(dayStart, h);
     g += `<line class="grid" x1="${x}" x2="${x}" y1="12" y2="92"/><text class="ax" x="${x}" y="108" text-anchor="middle">${lab}</text>`;
   }
   g += `<text class="ax" x="${L - 8}" y="34" text-anchor="end">Sleep</text><text class="ax" x="${L - 8}" y="74" text-anchor="end">Feeds</text>`;
@@ -761,13 +836,11 @@ function dayTimeline(D) {
     if (e.type === "sleep") g += `<rect class="c-S" x="${x1.toFixed(1)}" y="18" width="${Math.max(2, x2 - x1).toFixed(1)}" height="24" rx="3"/>`;
     else g += `<rect class="c-${e.side}" x="${x1.toFixed(1)}" y="58" width="${Math.max(3, x2 - x1).toFixed(1)}" height="24" rx="2"/>`;
   }
-  if (windowActive()) {
-    const f = hmToMin(S.ins.tFrom), t = hmToMin(S.ins.tTo);
-    const px = m => L + m / 1440 * iw;
-    const dim = (a, b) => { if (b > a) g += `<rect class="dim" x="${px(a).toFixed(1)}" y="12" width="${(px(b) - px(a)).toFixed(1)}" height="80"/>`; };
-    if (f !== null && t !== null) { if (f <= t) { dim(0, f); dim(t + 1, 1440); } else dim(t + 1, f); }
+  for (const [a, b] of dimSpans()) {
+    const x1 = L + a / 1440 * iw, x2 = L + b / 1440 * iw;
+    g += `<rect class="dim" x="${x1.toFixed(1)}" y="12" width="${(x2 - x1).toFixed(1)}" height="80"/>`;
   }
-  if (key === dayKey(now())) { const x = X(now()); g += `<line class="nowline" x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="12" y2="92"/>`; }
+  if (key === bdKey(now())) { const x = X(now()); g += `<line class="nowline" x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="12" y2="92"/>`; }
   return `<svg viewBox="0 0 ${W} 120" role="img" aria-label="Timeline of sleep and feeds for the day">${g}</svg>`;
 }
 
@@ -804,8 +877,10 @@ function viewInsights() {
   if (!D.evs.length && !(I.mode === "day")) return h + `<p class="empty">Nothing logged in this range.</p>`;
 
   if (I.mode === "day") {
-    h += `<div class="chart"><p class="cap">Sleep and feeds through the day</p>${dayTimeline(D)}
-      <div class="legend"><span><i class="lg-S"></i>Sleep</span><span><i class="lg-L"></i>Left</span><span><i class="lg-R"></i>Right</span><span><i class="lg-B"></i>Bottle</span></div></div>`;
+    h += `<div class="chart"><p class="cap">Day clock, ${t12(S.dayStart)} to ${t12(S.dayStart)}. Outer ring is sleep, inner ring is feeds.</p>
+      <div class="clock-wrap">${dayClock(D)}</div>
+      <div class="legend"><span><i class="lg-S"></i>Sleep</span><span><i class="lg-L"></i>Left</span><span><i class="lg-R"></i>Right</span><span><i class="lg-B"></i>Bottle</span></div></div>
+      <div class="chart"><p class="cap">Timeline</p>${dayTimeline(D)}</div>`;
     const b = D.by.get(D.end);
     h += `<section class="day"><h2>Feed times</h2><p class="tot">${b.feeds.length} feed${b.feeds.length === 1 ? "" : "s"}</p>
       ${b.feeds.length ? b.feeds.map(entryHtml).join("") : `<p class="empty">No feeds logged this day.</p>`}</section>`;
@@ -828,7 +903,7 @@ function viewInsights() {
 
 const SYNC_TEXT = { live: "Synced", pending: "Saving…", local: "Only on this phone", error: "Can’t reach sync", offline: "Offline" };
 function inviteLink() {
-  return `${location.origin}${location.pathname}#join=${S.code}&baby=${encodeURIComponent(S.baby)}`;
+  return `${location.origin}${location.pathname}#join=${S.code}&baby=${encodeURIComponent(S.baby)}&cut=${encodeURIComponent(S.dayStart)}`;
 }
 function viewSettings() {
   const cloud = !!FIREBASE_CONFIG;
@@ -837,6 +912,8 @@ function viewSettings() {
     <h2>This phone</h2>
     <label>Your name<input id="set-me" type="text" value="${esc(S.me)}" autocomplete="given-name"></label>
     <label>Baby’s name<input id="set-baby" type="text" value="${esc(S.baby)}"></label>
+    <label>Day starts at<input id="set-daystart" type="time" value="${esc(S.dayStart)}"></label>
+    <p>Daily totals and the day clock run from this time to the same time the next day, so night feeds count toward the day they belong to. Set it to 12:00 am for calendar days.</p>
   </section>
   <section class="set">
     <h2>Sharing</h2>
@@ -850,11 +927,14 @@ function viewSettings() {
     <button class="btn wide" data-act="join">Join</button>
   </section>
   <section class="set">
-    <h2>Feed check-ins</h2>
+    <h2>Check-ins</h2>
     <label class="check"><input id="set-awake" type="checkbox" ${S.keepAwake ? "checked" : ""}>Keep the screen on while a feed is running</label>
     <p>Check-ins appear on any phone that has the app open. Keeping the screen on is the most reliable way to catch a forgotten timer.</p>
     <label class="check"><input id="set-notify" type="checkbox" ${S.notify ? "checked" : ""}>Also try a notification when the app is in the background</label>
     <p>Phones often pause web apps in the background, so this isn’t guaranteed.</p>
+    <label>Ask if ${esc(S.baby || "baby")} is still asleep<select id="set-sleepci">${[[0, "Never"], [30, "Every 30 minutes"], [45, "Every 45 minutes"], [60, "Every hour"], [90, "Every 90 minutes"], [120, "Every 2 hours"]]
+      .map(([v, n]) => `<option value="${v}" ${S.sleepCI === v ? "selected" : ""}>${n}</option>`).join("")}</select></label>
+    <p>Feeds are checked at ${CHECKIN_MINUTES.join(" and ")} minutes. Each phone keeps its own sleep setting. Sleep check-ins show when the app is open, or as soon as you open it.</p>
   </section>
   <section class="set">
     <h2>Your data</h2>
@@ -937,11 +1017,20 @@ $("#summary").addEventListener("click", e => { if (e.target === e.currentTarget)
 /* ---------- Feed check-ins ---------- */
 let promptKey = null;
 function dueCheckin() {
-  const a = activeFeed(); if (!a) return null;
-  const mins = (now() - a.start) / 60000;
-  let due = 0;
-  for (const m of CHECKIN_MINUTES) if (mins >= m && (a.ack || 0) < m) due = m;
-  return due ? { ev: a, mins: due } : null;
+  const f = activeFeed();
+  if (f) {
+    const mins = (now() - f.start) / 60000;
+    let due = 0;
+    for (const m of CHECKIN_MINUTES) if (mins >= m && (f.ack || 0) < m) due = m;
+    if (due) return { ev: f, mins: due, kind: "feed" };
+  }
+  const sl = activeSleep();
+  if (sl && S.sleepCI > 0) {
+    const mins = (now() - sl.start) / 60000;
+    const due = Math.floor(mins / S.sleepCI) * S.sleepCI;   // 60, 120, 180... when set to 60
+    if (due >= S.sleepCI && (sl.ack || 0) < due) return { ev: sl, mins: due, kind: "sleep" };
+  }
+  return null;
 }
 let audioCtx = null;
 function unlockAudio() {
@@ -963,15 +1052,21 @@ function beep() {
 }
 function showCheckin(due) {
   const dlg = $("#checkin");
-  const elapsed = now() - due.ev.start;
-  dlg.dataset.id = due.ev.id; dlg.dataset.mins = due.mins;
-  $("#ci-body").textContent = `${S.baby || "Baby"} has been on the ${sideName(due.ev.side).toLowerCase()} side for ${fmtDur(elapsed)}.`;
+  const elapsed = now() - due.ev.start, baby = S.baby || "Baby", isSleep = due.kind === "sleep";
+  dlg.dataset.id = due.ev.id; dlg.dataset.mins = due.mins; dlg.dataset.kind = due.kind;
+  $("#ci-title").textContent = isSleep ? "Still asleep?" : "Still feeding?";
+  $("#ci-body").textContent = isSleep
+    ? `${baby} has been asleep for ${fmtDur(elapsed)}.`
+    : `${baby} has been on the ${sideName(due.ev.side).toLowerCase()} side for ${fmtDur(elapsed)}.`;
+  $("#ci-yes").textContent = isSleep ? "Still asleep" : "Still feeding";
+  $("#ci-stop").textContent = isSleep ? "Awake: stop the timer now" : "Stop the timer now";
+  $("#ci-fix").textContent = isSleep ? "Set the wake time" : "Set the end time";
   if (!dlg.open) dlg.showModal();
   try { navigator.vibrate && navigator.vibrate([250, 120, 250]); } catch {}
   beep();
   if (S.notify && document.hidden && "Notification" in window && Notification.permission === "granted" && navigator.serviceWorker) {
-    navigator.serviceWorker.ready.then(r => r.showNotification("Still feeding?", {
-      body: `${sideName(due.ev.side)} side · ${fmtDur(elapsed)}`, tag: "checkin", renotify: true, vibrate: [250, 120, 250]
+    navigator.serviceWorker.ready.then(r => r.showNotification(isSleep ? "Still asleep?" : "Still feeding?", {
+      body: isSleep ? `Asleep for ${fmtDur(elapsed)}` : `${sideName(due.ev.side)} side · ${fmtDur(elapsed)}`, tag: "checkin", renotify: true, vibrate: [250, 120, 250]
     })).catch(() => {});
   }
 }
@@ -1028,6 +1123,8 @@ function joinFrom(text) {
   const b = code !== text && text.match(/baby=([^&]+)/);
   LS.set("bl_code", code);
   if (b) LS.set("bl_baby", decodeURIComponent(b[1]));
+  const c = code !== text && text.match(/cut=([^&]+)/);
+  if (c) LS.set("bl_daystart", decodeURIComponent(c[1]));
   location.reload();
 }
 async function copyText(t) {
@@ -1058,7 +1155,7 @@ document.addEventListener("click", e => {
       break;
     case "join": joinFrom($("#join-in").value); break;
     case "ci-yes": store.update(ciDlg.dataset.id, { ack: Number(ciDlg.dataset.mins) }); ciDlg.close(); break;
-    case "ci-stop": ciDlg.close(); stopFeed(ciDlg.dataset.id); break;
+    case "ci-stop": ciDlg.close(); if (ciDlg.dataset.kind === "sleep") stopSleep(ciDlg.dataset.id); else stopFeed(ciDlg.dataset.id); break;
     case "ci-fix": ciDlg.close(); openSheet(ciDlg.dataset.id, { fillEnd: true }); break;
     case "sum-feed": $("#summary").close(); S.tab = "feed"; startFeed(b.dataset.side); render(); break;
     case "sum-sleep": $("#summary").close(); S.tab = "sleep"; startSleep(); render(); break;
@@ -1091,6 +1188,8 @@ $("#view").addEventListener("change", async e => {
   if (id === "ins-end" && e.target.value) { S.ins.end = e.target.value; render(); return; }
   if (id === "ins-tfrom") { S.ins.tFrom = e.target.value || "00:00"; render(); return; }
   if (id === "ins-tto") { S.ins.tTo = e.target.value || "23:59"; render(); return; }
+  if (id === "set-daystart") { S.dayStart = e.target.value || "07:00"; LS.set("bl_daystart", S.dayStart); toast("Saved"); return; }
+  if (id === "set-sleepci") { S.sleepCI = Number(e.target.value); LS.set("bl_sleepci", S.sleepCI); toast("Saved"); return; }
   if (e.target.id === "set-me") { S.me = e.target.value.trim(); LS.set("bl_me", S.me); toast("Saved"); }
   if (e.target.id === "set-baby") { S.baby = e.target.value.trim() || "Baby"; LS.set("bl_baby", S.baby); $("#baby").textContent = S.baby; toast("Saved"); }
   if (e.target.id === "set-awake") { S.keepAwake = e.target.checked; LS.set("bl_awake", S.keepAwake); keepAwake(); }
@@ -1178,6 +1277,7 @@ async function boot() {
   if (h.get("join")) {
     S.code = h.get("join"); LS.set("bl_code", S.code);
     if (h.get("baby")) { S.baby = h.get("baby"); LS.set("bl_baby", S.baby); }
+    if (h.get("cut")) { S.dayStart = h.get("cut"); LS.set("bl_daystart", S.dayStart); }
     history.replaceState(null, "", location.pathname + location.search);
   }
   if (!S.code) { S.code = newCode(); LS.set("bl_code", S.code); }

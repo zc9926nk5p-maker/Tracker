@@ -41,4 +41,4 @@ Your data is separated by a long random family code inside the invite link. Don'
 Edit the `WX` line near the top of the script in `index.html` (latitude, longitude, timezone, place name).
 
 ## After you edit files
-Bump the version in `sw.js` (`baby-log-v5` to `baby-log-v6`) so phones pick up the change.
+Bump the version in `sw.js` (`baby-log-v7` to `baby-log-v8`) so phones pick up the change.
