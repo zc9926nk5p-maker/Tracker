@@ -1,9 +1,10 @@
-const CACHE = "baby-log-v7";
-const SHELL = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
+const CACHE = "baby-log-v9";
+const SHELL = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 const HOSTS = ["www.gstatic.com", "fonts.googleapis.com", "fonts.gstatic.com"];
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // Cache each file on its own so one missing file can never stop the service worker installing
+  e.waitUntil(caches.open(CACHE).then(c => Promise.all(SHELL.map(u => c.add(u).catch(() => {})))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", e => {

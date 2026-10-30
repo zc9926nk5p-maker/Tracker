@@ -5,7 +5,7 @@ Feeds, sleep and weather for two parents. A static web app: no build step, just 
 ## Files
 - `index.html` the whole app
 - `sw.js` offline support
-- `manifest.json`, `icon-192.png`, `icon-512.png` install-to-home-screen
+- `manifest.json` `apple-touch-icon.png` and the four `icon-*.png` files: install-to-home-screen
 
 ## Put it online (GitHub Pages)
 1. Create a new GitHub repository and upload every file in this folder to the top level.
@@ -41,4 +41,4 @@ Your data is separated by a long random family code inside the invite link. Don'
 Edit the `WX` line near the top of the script in `index.html` (latitude, longitude, timezone, place name).
 
 ## After you edit files
-Bump the version in `sw.js` (`baby-log-v7` to `baby-log-v8`) so phones pick up the change.
+Bump the version in `sw.js` (`baby-log-v9` to `baby-log-v10`) so phones pick up the change.

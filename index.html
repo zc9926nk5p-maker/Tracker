@@ -8,7 +8,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Baby Log">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icon-192.png">
 <title>Baby Log</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -38,7 +38,8 @@
 :root{
   --bg:#12161d; --surface:#1a2029; --raised:#232b36; --line:#2c3643;
   --ink:#e8ecf1; --muted:#93a0b2;
-  --left:#6cc4d6; --right:#f1aa6a; --sleep:#a398ee; --bottle:#8fd19e;
+  --left:#b78af2; --right:#eda6c2; --sleep:#7ab6ee; --bottle:#8fd19e; --rain:#7ab6ee;
+  --left-l:#dcbcff; --left-m:#b78af2; --left-d:#6a3ab8; --right-l:#fad8e3; --right-m:#eda6c2; --right-d:#a2486f;
   --on:#10141a; --stopbg:#10141a; --stopfg:#f4f6f9; --danger:#f28b8b; --warn:#f1c46a;
   color-scheme:dark;
 }
@@ -46,7 +47,8 @@
   :root{
     --bg:#eceff3; --surface:#ffffff; --raised:#f4f6f9; --line:#d6dde6;
     --ink:#18202b; --muted:#5a6778;
-    --left:#157790; --right:#b05a10; --sleep:#5b4fc9; --bottle:#2a7f44;
+    --left:#7040c0; --right:#b5457a; --sleep:#2e6db3; --bottle:#2a7f44; --rain:#2e6db3;
+    --left-l:#cdb0f7; --left-m:#8f5fdc; --left-d:#4b2a94; --right-l:#f4bdd3; --right-m:#d8749f; --right-d:#8a2f58;
     --on:#ffffff; --danger:#b83232; --warn:#8a5b00;
     color-scheme:light;
   }
@@ -83,18 +85,16 @@ main{padding:8px 16px 24px}
 .lastfed .sub{margin:4px 0 0;color:var(--muted)}
 
 .sides{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.side{
-  position:relative;height:clamp(180px,34dvh,280px);border-radius:26px;border:3px solid;
-  background:transparent;display:flex;align-items:flex-end;justify-content:flex-start;padding:18px;
-  font:700 2rem/1 "Bricolage Grotesque",sans-serif;
-}
-.side.left{border-color:var(--left);color:var(--left)}
-.side.right{border-color:var(--right);color:var(--right)}
-.side.next.left{background:var(--left);color:var(--on)}
-.side.next.right{background:var(--right);color:var(--on)}
-.side .tag{position:absolute;top:14px;left:16px;font:600 .85rem "Figtree",sans-serif;
-  background:var(--on);color:var(--ink);padding:3px 10px;border-radius:99px}
-.side:active{transform:scale(.98)}
+.side{position:relative;border:0;background:none;padding:28px 0 6px;display:flex;flex-direction:column;align-items:center;gap:8px;
+  font:700 1.7rem/1 "Bricolage Grotesque",sans-serif;color:var(--ink)}
+.side svg{width:100%;max-width:176px;height:auto;display:block}
+.side.fade svg{opacity:.7}
+.side .o{fill:var(--left-l)} .side .m{fill:var(--left-m)} .side .d{fill:var(--left-d)}
+.side.right .o{fill:var(--right-l)} .side.right .m{fill:var(--right-m)} .side.right .d{fill:var(--right-d)}
+.side .ol{fill:none;stroke:var(--ink);stroke-width:2.5}
+.side .tag{position:absolute;top:0;left:50%;transform:translateX(-50%);font:600 .85rem "Figtree",sans-serif;
+  background:var(--ink);color:var(--bg);padding:3px 12px;border-radius:99px}
+.side:active{transform:scale(.97)}
 
 .btn{border:0;border-radius:16px;padding:15px 18px;font-weight:600;font-size:1rem;background:var(--raised);min-height:52px}
 .btn.wide{width:100%;margin-top:12px}
@@ -220,7 +220,7 @@ details.filter .btn{margin-top:6px;width:100%}
 .wx-h{flex:0 0 auto;min-width:68px;background:var(--raised);border-radius:14px;padding:8px 6px;display:grid;justify-items:center;gap:2px;font-size:.95rem}
 .wx-hh{color:var(--muted);font-size:.8rem}
 .wx-fl{color:var(--muted);font-size:.75rem}
-.wx-pp{color:var(--left);font-size:.8rem;min-height:1.1em}
+.wx-pp{color:var(--rain);font-size:.8rem;min-height:1.1em}
 .wx-days{margin-top:8px}
 .wx-d{display:grid;grid-template-columns:52px 1fr auto;gap:8px;padding:8px 0;border-top:1px solid var(--line);font-size:.95rem}
 .wx-dc{color:var(--muted)}
@@ -234,8 +234,9 @@ details.filter .btn{margin-top:6px;width:100%}
   .strip,.active .hint{display:none}
   .lastfed{padding:2px 2px 8px} .lastfed .v{font-size:1.5rem}
   .sides{gap:8px}
-  .side{height:clamp(96px,30dvh,150px);font-size:1.5rem;padding:12px;border-radius:20px}
-  .side .tag{top:8px;left:10px;font-size:.75rem}
+  .side{font-size:1.3rem;padding:22px 0 2px;gap:4px}
+  .side svg{max-width:110px}
+  .side .tag{font-size:.75rem;padding:2px 10px}
   .btn{min-height:44px;padding:10px 14px}
   .active{padding:14px;border-radius:22px}
   .big{font-size:clamp(2.6rem,16vw,4rem);margin:6px 0 12px}
@@ -565,8 +566,11 @@ function viewFeed() {
   }
   h += `</section><div class="sides">`;
   for (const s of ["L", "R"]) {
-    h += `<button class="side ${s === "L" ? "left" : "right"} ${s === next ? "next" : ""}" data-act="start-feed" data-side="${s}">
-      ${s === next ? `<span class="tag">Next</span>` : ""}${sideName(s)}</button>`;
+    const isNext = s === next;
+    h += `<button class="side ${s === "L" ? "left" : "right"} ${next && !isNext ? "fade" : ""}" data-act="start-feed" data-side="${s}" aria-label="Start ${sideName(s).toLowerCase()} side${isNext ? ", next side" : ""}">
+      ${isNext ? `<span class="tag">Next</span>` : ""}
+      <svg viewBox="-3 -3 106 106" aria-hidden="true"><circle class="o" cx="50" cy="50" r="46"/><circle class="m" cx="50" cy="50" r="26"/><circle class="d" cx="50" cy="50" r="11"/>${isNext ? `<circle class="ol" cx="50" cy="50" r="49.5"/>` : ""}</svg>
+      <span>${sideName(s)}</span></button>`;
   }
   h += `</div><button class="btn wide" data-act="bottle">Log a bottle</button>`;
   return h + `<div style="height:14px"></div>` + todayStrip();
