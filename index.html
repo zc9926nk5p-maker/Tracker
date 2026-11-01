@@ -38,7 +38,7 @@
 :root{
   --bg:#12161d; --surface:#1a2029; --raised:#232b36; --line:#2c3643;
   --ink:#e8ecf1; --muted:#93a0b2;
-  --left:#b78af2; --right:#eda6c2; --sleep:#7ab6ee; --bottle:#8fd19e; --rain:#7ab6ee;
+  --left:#b78af2; --right:#eda6c2; --sleep:#7ab6ee; --bottle:#8fd19e; --rain:#7ab6ee; --pump:#f2c879;
   --left-l:#dcbcff; --left-m:#b78af2; --left-d:#6a3ab8; --right-l:#fad8e3; --right-m:#eda6c2; --right-d:#a2486f;
   --on:#10141a; --stopbg:#10141a; --stopfg:#f4f6f9; --danger:#f28b8b; --warn:#f1c46a;
   color-scheme:dark;
@@ -47,7 +47,7 @@
   :root{
     --bg:#eceff3; --surface:#ffffff; --raised:#f4f6f9; --line:#d6dde6;
     --ink:#18202b; --muted:#5a6778;
-    --left:#7040c0; --right:#b5457a; --sleep:#2e6db3; --bottle:#2a7f44; --rain:#2e6db3;
+    --left:#7040c0; --right:#b5457a; --sleep:#2e6db3; --bottle:#2a7f44; --rain:#2e6db3; --pump:#9a6700;
     --left-l:#cdb0f7; --left-m:#8f5fdc; --left-d:#4b2a94; --right-l:#f4bdd3; --right-m:#d8749f; --right-d:#8a2f58;
     --on:#ffffff; --danger:#b83232; --warn:#8a5b00;
     color-scheme:light;
@@ -106,8 +106,11 @@ main{padding:8px 16px 24px}
 
 .active{border-radius:28px;padding:22px 20px 20px;color:var(--on);margin-top:4px}
 .active.bottle{background:var(--bottle)}
-.bottle-btn{width:100%;margin-top:6px;min-height:58px;border:2px solid var(--bottle);color:var(--bottle);background:transparent;border-radius:18px;display:flex;align-items:center;justify-content:center;gap:10px;font:700 1.15rem "Bricolage Grotesque",sans-serif}
-.bottle-btn:active{transform:scale(.98)}
+.active.pump{background:var(--pump);margin-bottom:12px}
+.start-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+.bottle-btn,.pump-btn{width:100%;min-height:58px;border:2px solid var(--bottle);color:var(--bottle);background:transparent;border-radius:18px;display:flex;align-items:center;justify-content:center;gap:8px;font:700 1.02rem "Bricolage Grotesque",sans-serif}
+.pump-btn{border-color:var(--pump);color:var(--pump)}
+.bottle-btn:active,.pump-btn:active{transform:scale(.98)}
 .active.left{background:var(--left)} .active.right{background:var(--right)} .active.sleepcard{background:var(--sleep)}
 .active .lab{margin:0;font-weight:600;opacity:.9}
 .big{font:700 clamp(4rem,22vw,6.5rem)/1 "Bricolage Grotesque",sans-serif;font-variant-numeric:tabular-nums;margin:14px 0 20px;letter-spacing:-.03em}
@@ -133,7 +136,7 @@ main{padding:8px 16px 24px}
 .entry{width:100%;text-align:left;border:0;background:var(--surface);border-radius:14px;padding:12px 14px;margin-bottom:8px;
   display:grid;grid-template-columns:14px 1fr;column-gap:12px;align-items:center}
 .entry .dot{width:12px;height:12px;border-radius:50%;grid-row:span 2}
-.dot.L{background:var(--left)} .dot.R{background:var(--right)} .dot.B{background:var(--bottle)} .dot.S{background:var(--sleep)}
+.dot.L{background:var(--left)} .dot.R{background:var(--right)} .dot.B{background:var(--bottle)} .dot.S{background:var(--sleep)} .dot.P{background:var(--pump)}
 .entry .m{font-weight:600}
 .entry .s{color:var(--muted);font-size:.9rem}
 .empty{color:var(--muted);padding:24px 4px;text-align:center}
@@ -194,8 +197,8 @@ details.filter .btn{margin-top:6px;width:100%}
 .chart .cap{margin:0 8px 6px;color:var(--muted);font-size:.88rem}
 .legend{display:flex;gap:14px;flex-wrap:wrap;margin:6px 8px 0;font-size:.85rem;color:var(--muted)}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px}
-.lg-L{background:var(--left)} .lg-R{background:var(--right)} .lg-B{background:var(--bottle)} .lg-S{background:var(--sleep)}
-.c-L{fill:var(--left)} .c-R{fill:var(--right)} .c-B{fill:var(--bottle)} .c-S{fill:var(--sleep)}
+.lg-L{background:var(--left)} .lg-R{background:var(--right)} .lg-B{background:var(--bottle)} .lg-S{background:var(--sleep)} .lg-P{background:var(--pump)}
+.c-L{fill:var(--left)} .c-R{fill:var(--right)} .c-B{fill:var(--bottle)} .c-S{fill:var(--sleep)} .c-P{fill:var(--pump)}
 .ax{fill:var(--muted);font-size:10px;font-family:"Figtree",system-ui,sans-serif}
 .grid{stroke:var(--line);stroke-width:1}
 .dim{fill:var(--surface);opacity:.7}
@@ -205,7 +208,7 @@ details.filter .btn{margin-top:6px;width:100%}
 .drow span:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
 .clock-wrap{max-width:360px;margin:0 auto}
 .trk{fill:none;stroke:var(--raised)}
-.arc-S{fill:none;stroke:var(--sleep)} .arc-L{fill:none;stroke:var(--left)} .arc-R{fill:none;stroke:var(--right)} .arc-B{fill:none;stroke:var(--bottle)}
+.arc-S{fill:none;stroke:var(--sleep)} .arc-L{fill:none;stroke:var(--left)} .arc-R{fill:none;stroke:var(--right)} .arc-B{fill:none;stroke:var(--bottle)} .arc-P{fill:none;stroke:var(--pump)}
 .dimarc{fill:none;stroke:var(--surface);opacity:.72}
 .cl-d{fill:var(--muted);font-size:12px;font-family:"Figtree",system-ui,sans-serif}
 .cl-big{fill:var(--ink);font:700 26px "Bricolage Grotesque",system-ui,sans-serif}
@@ -436,11 +439,13 @@ const activeFeed = () => S.events.find(e => e.type === "feed" && !e.end);
 const activeSleep = () => S.events.find(e => e.type === "sleep" && !e.end);
 const lastBreast = () => S.events.find(e => e.type === "feed" && (e.side === "L" || e.side === "R"));
 const lastSleepEnded = () => S.events.find(e => e.type === "sleep" && e.end);
+const activePump = () => S.events.find(e => e.type === "pump" && !e.end);
 
 function stats(list) {
-  const r = { feeds: 0, feedMs: 0, ml: 0, sleeps: 0, sleepMs: 0 };
+  const r = { feeds: 0, feedMs: 0, ml: 0, sleeps: 0, sleepMs: 0, pumps: 0, pumpMs: 0, pumpMl: 0 };
   for (const e of list) {
     const end = e.end || now();
+    if (e.type === "pump") { r.pumps++; r.pumpMs += end - e.start; r.pumpMl += e.ml || 0; continue; }
     if (e.type === "feed") {
       r.feeds++;
       if (e.side === "B") r.ml += e.ml || 0;
@@ -518,6 +523,33 @@ function showFeedSummary(last) {
     </div></div>`;
   d.showModal();
 }
+function startPump() {
+  if (activePump()) return;
+  const id = store.add({ type: "pump", side: null, start: now(), end: null, ml: null, by: S.me, ack: 0 });
+  buzz();
+  toast("Pumping started", { label: "Undo", fn: () => store.remove(id) });
+}
+function stopPump(id) {
+  const ev = S.events.find(e => e.id === id); if (!ev) return;
+  const end = now();
+  stopEvent(id, end); buzz();
+  showPumpSummary({ ...ev, end });
+}
+function showPumpSummary(ev) {
+  const d = $("#summary");
+  d.innerHTML = `<div class="sheet-in">
+    <h2>Pumping finished</h2>
+    <div class="sum-big">${clock(ev.end - ev.start)}</div>
+    <p>${clockTime(ev.start)} to ${clockTime(ev.end)}${ev.by ? ", " + esc(ev.by) : ""}</p>
+    <label>How much did you pump? (ml)
+      <input id="sum-ml" type="number" inputmode="numeric" min="0" data-id="${esc(ev.id)}" value="${ev.ml ?? ""}" placeholder="e.g. 120"></label>
+    <div class="stack">
+      <button class="btn solid" data-act="sum-done">Save</button>
+      <button class="btn ghost" data-act="sum-fix" data-id="${esc(ev.id)}">Fix the times</button>
+    </div></div>`;
+  d.showModal();
+  setTimeout(() => { const i = $("#sum-ml"); if (i && i.focus) i.focus(); }, 60);
+}
 function showBottleSummary(ev) {
   const d = $("#summary");
   d.innerHTML = `<div class="sheet-in">
@@ -565,14 +597,22 @@ function showSleepSummary(ev) {
 /* ---------- Views ---------- */
 function todayStrip() {
   const all = todayEvents(), s = stats(all), done = stats(all.filter(e => e.end));
-  const parts = [`<span>Today</span>`, `<b>${s.feeds} feed${s.feeds === 1 ? "" : "s"} · ${dur0(done.feedMs)}</b>`];
-  return `<div class="strip">${parts.join("")}</div>`;
+  const parts = [`<span>Today</span>`, `<b>${s.feeds} feed${s.feeds === 1 ? "" : "s"}${done.feedMs >= 30000 ? " · " + dur0(done.feedMs) : ""}</b>`];
+  return `<div class="strip">${parts.join("")}</div>` +
+    (s.pumps ? `<div class="strip"><span>Pumped today</span><b>${s.pumpMl ? s.pumpMl + " ml · " : ""}${s.pumps} session${s.pumps === 1 ? "" : "s"}</b></div>` : "");
 }
 
 function viewFeed() {
   const a = activeFeed(), sl = activeSleep();
   let h = "";
   if (sl) h += `<div class="strip sleep"><span>Asleep</span><b data-since="${sl.start}">0:00</b></div>`;
+  const pu = activePump();
+  if (pu) h += `<section class="active pump">
+      <p class="lab">Pumping · started ${clockTime(pu.start)}${pu.by ? " · " + esc(pu.by) : ""}</p>
+      <div class="big" data-since="${pu.start}">0:00</div>
+      <div class="row"><button class="btn stop" data-act="stop-pump">Stop pumping</button></div>
+      <p class="hint">Check-ins at ${CHECKIN_MINUTES.join(" and ")} minutes.</p>
+    </section>`;
   if (a) {
     const col = a.side === "L" ? "left" : a.side === "R" ? "right" : "bottle";
     h += `<section class="active ${col}">
@@ -608,8 +648,9 @@ function viewFeed() {
       <svg viewBox="-3 -3 106 106" aria-hidden="true"><circle class="o" cx="50" cy="50" r="46"/><circle class="m" cx="50" cy="50" r="26"/><circle class="d" cx="50" cy="50" r="11"/>${isNext ? `<circle class="ol" cx="50" cy="50" r="49.5"/>` : ""}</svg>
       <span>${sideName(s)}</span></button>`;
   }
-  h += `</div><button class="bottle-btn" data-act="start-bottle"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.5" fill="currentColor"/></svg>Start a bottle</button>
-    <button class="btn wide ghost" data-act="bottle">Add a past bottle</button>`;
+  const ring = `<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.5" fill="currentColor"/></svg>`;
+  h += `</div><div class="start-row"${pu ? ' style="grid-template-columns:1fr"' : ""}><button class="bottle-btn" data-act="start-bottle">${ring}Start bottle</button>${pu ? "" : `<button class="pump-btn" data-act="start-pump">${ring}Start pumping</button>`}</div>
+    <button class="btn wide ghost" data-act="bottle">Add a past bottle or pump</button>`;
   return h + `<div style="height:14px"></div>` + todayStrip();
 }
 
@@ -636,10 +677,11 @@ function viewSleep() {
 }
 
 function entryHtml(e) {
-  const kind = e.type === "sleep" ? "S" : e.side;
+  const kind = e.type === "sleep" ? "S" : e.type === "pump" ? "P" : e.side;
   const dur = (e.end || now()) - e.start;
   let main;
   if (e.type === "sleep") main = `Sleep · ${e.end ? fmtDur(dur) : "running"}`;
+  else if (e.type === "pump") main = `Pumping${e.ml ? " · " + e.ml + " ml" : ""} · ${e.end ? fmtDur(dur) : "running"}`;
   else if (e.side === "B") main = `Bottle${e.ml ? " · " + e.ml + " ml" : ""}${!e.end ? " · running" : dur >= 30000 ? " · " + fmtDur(dur) : ""}`;
   else main = `${sideName(e.side)} side · ${e.end ? fmtDur(dur) : "running"}`;
   const range = e.type === "feed" && e.side === "B" && e.end && e.end - e.start < 30000 ? clockTime(e.start)
@@ -660,10 +702,11 @@ function viewEntries() {
   const t = stats(todayEvents());
   let h = `<div class="tiles">
     <div class="tile"><div class="n">${t.feeds}</div><div class="l">Feeds today</div></div>
-    <div class="tile"><div class="n">${fmtDur(t.feedMs)}</div><div class="l">Feeding time today</div></div>
+    <div class="tile"><div class="n">${dur0(t.feedMs)}</div><div class="l">Feeding time today</div></div>
     <div class="tile"><div class="n">${t.sleeps}</div><div class="l">Sleeps today</div></div>
-    <div class="tile"><div class="n">${fmtDur(t.sleepMs)}</div><div class="l">Sleep today</div></div>
+    <div class="tile"><div class="n">${dur0(t.sleepMs)}</div><div class="l">Sleep today</div></div>
     ${t.ml ? `<div class="tile"><div class="n">${t.ml} ml</div><div class="l">Bottle today</div></div>` : ""}
+    ${t.pumpMl ? `<div class="tile"><div class="n">${t.pumpMl} ml</div><div class="l">Pumped today</div></div>` : ""}
   </div>
   <div class="actions">
     <button class="btn" data-act="add-past">Add an entry</button>
@@ -678,9 +721,10 @@ function viewEntries() {
   }
   for (const [k, list] of groups) {
     const s = stats(list);
-    const bits = [`${s.feeds} feed${s.feeds === 1 ? "" : "s"} · ${fmtDur(s.feedMs)}`];
+    const bits = [`${s.feeds} feed${s.feeds === 1 ? "" : "s"} · ${dur0(s.feedMs)}`];
     if (s.ml) bits.push(`${s.ml} ml bottle`);
-    bits.push(`${fmtDur(s.sleepMs)} sleep`);
+    if (s.pumps) bits.push(`${s.pumpMl ? s.pumpMl + " ml " : ""}pumped`);
+    bits.push(`${dur0(s.sleepMs)} sleep`);
     h += `<section class="day"><h2>${esc(dayLabel(k))}</h2><p class="tot">${bits.join(" · ")}</p>${list.map(entryHtml).join("")}</section>`;
   }
   return h;
@@ -688,14 +732,15 @@ function viewEntries() {
 
 /* ---------- Insights ---------- */
 const MODES = [["day", "Day"], ["week", "Week"], ["month", "Month"], ["quarter", "3 mo"], ["custom", "Custom"]];
-const METRICS = [["feeds", "Feeds"], ["feedMin", "Feed time"], ["sleep", "Sleep"], ["bottle", "Bottle"]];
+const METRICS = [["feeds", "Feeds"], ["feedMin", "Feed time"], ["sleep", "Sleep"], ["bottle", "Bottle"], ["pump", "Pumped"]];
 const SERIES = {
   feeds: [{ c: "L", name: "Left", v: b => b.fL }, { c: "R", name: "Right", v: b => b.fR }, { c: "B", name: "Bottle", v: b => b.fB }],
   feedMin: [{ c: "L", name: "Left", v: b => b.mL / 60000 }, { c: "R", name: "Right", v: b => b.mR / 60000 }, { c: "B", name: "Bottle", v: b => b.mB / 60000 }],
   sleep: [{ c: "S", name: "Sleep", v: b => b.sl / 3600000 }],
-  bottle: [{ c: "B", name: "Bottle", v: b => b.ml }]
+  bottle: [{ c: "B", name: "Bottle", v: b => b.ml }],
+  pump: [{ c: "P", name: "Pumped", v: b => b.pml }]
 };
-const UNITS = { feeds: "feeds", feedMin: "minutes of feeding", sleep: "hours of sleep", bottle: "ml of bottle" };
+const UNITS = { feeds: "feeds", feedMin: "minutes of feeding", sleep: "hours of sleep", bottle: "ml drunk from the bottle", pump: "ml pumped" };
 const keyToDate = k => { const [Y, M, D] = k.split("-").map(Number); return new Date(Y, M - 1, D); };
 const addDays = (k, n) => { const d = keyToDate(k); d.setDate(d.getDate() + n); return dayKey(d.getTime()); };
 const daysBetween = (a, b) => Math.round((keyToDate(b) - keyToDate(a)) / 86400000);
@@ -737,7 +782,7 @@ function insBuild() {
   const { start, end } = insRange(), today = bdKey(now());
   const days = [];
   for (let k = start, n = 0; k <= end && n < 800; k = addDays(k, 1), n++) days.push(k);
-  const by = new Map(days.map(k => [k, { k, fL: 0, fR: 0, fB: 0, mL: 0, mR: 0, mB: 0, ml: 0, sl: 0, ns: 0, feeds: [] }]));
+  const by = new Map(days.map(k => [k, { k, fL: 0, fR: 0, fB: 0, mL: 0, mR: 0, mB: 0, ml: 0, sl: 0, ns: 0, pn: 0, mP: 0, pml: 0, pumps: [], feeds: [] }]));
   const cutMs = cutMin() * 60000;
   const startMs = keyToDate(start).getTime() + cutMs, endMs = keyToDate(addDays(end, 1)).getTime() + cutMs;
   const evs = S.events.filter(e => e.start >= startMs && e.start < endMs && inWindow(e.start)).sort((a, b) => a.start - b.start);
@@ -745,11 +790,12 @@ function insBuild() {
   for (const e of S.events) if (e.start < firstAll) firstAll = e.start;
   const firstKey = isFinite(firstAll) ? bdKey(firstAll) : today;
   const feedStarts = [];
-  let longestSleep = 0, msL = 0, msR = 0, ml = 0, sleepMs = 0, feeds = 0, feedMs = 0;
+  let longestSleep = 0, msL = 0, msR = 0, ml = 0, sleepMs = 0, feeds = 0, feedMs = 0, pumps = 0, pumpMs = 0, pumpMl = 0;
   for (const e of evs) {
     const b = by.get(bdKey(e.start)); if (!b) continue;
     const dur = (e.end || now()) - e.start;
     if (e.type === "sleep") { b.sl += dur; b.ns++; sleepMs += dur; if (dur > longestSleep) longestSleep = dur; continue; }
+    if (e.type === "pump") { b.pn++; b.mP += dur; b.pml += e.ml || 0; b.pumps.push(e); pumps++; pumpMs += dur; pumpMl += e.ml || 0; continue; }
     b.feeds.push(e); feeds++; feedStarts.push(e.start);
     if (e.side === "B") { b.fB++; b.mB += dur; feedMs += dur; b.ml += e.ml || 0; ml += e.ml || 0; }
     else if (e.side === "L") { b.fL++; b.mL += dur; msL += dur; feedMs += dur; }
@@ -758,7 +804,7 @@ function insBuild() {
   let gapSum = 0, gapN = 0;
   for (let i = 1; i < feedStarts.length; i++) { const g = feedStarts[i] - feedStarts[i - 1]; if (g <= 12 * 3600000) { gapSum += g; gapN++; } }
   const nd = Math.max(1, days.filter(k => k >= firstKey && k <= today).length);
-  return { start, end, days, by, evs, nd, feeds, feedMs, ml, sleepMs, longestSleep, msL, msR, avgGap: gapN ? gapSum / gapN : null, firstKey, today };
+  return { start, end, days, by, evs, nd, feeds, feedMs, ml, sleepMs, longestSleep, msL, msR, pumps, pumpMs, pumpMl, avgGap: gapN ? gapSum / gapN : null, firstKey, today };
 }
 
 function barChart(D) {
@@ -839,6 +885,7 @@ function dayClock(D) {
     if (e.start >= dayEnd || end <= dayStart) continue;
     const s0 = Math.max(e.start, dayStart), e0 = Math.min(end, dayEnd);
     if (e.type === "sleep") { sleepMs += e0 - s0; g += `<path class="arc-S" stroke-width="${SW}" d="${arc(RS, ang(s0), ang(e0))}"/>`; }
+    else if (e.type === "pump") { const a1 = ang(s0); g += `<path class="arc-P" stroke-width="${SW}" d="${arc(RF, a1, Math.max(ang(e0), a1 + 3))}"/>`; }
     else {
       if (e.start >= dayStart) feeds++;
       feedMs += e0 - s0;
@@ -875,7 +922,7 @@ function dayTimeline(D) {
     if (e.start >= dayEnd || end <= dayStart) continue;
     const x1 = X(e.start), x2 = X(end);
     if (e.type === "sleep") g += `<rect class="c-S" x="${x1.toFixed(1)}" y="18" width="${Math.max(2, x2 - x1).toFixed(1)}" height="24" rx="3"/>`;
-    else g += `<rect class="c-${e.side}" x="${x1.toFixed(1)}" y="58" width="${Math.max(3, x2 - x1).toFixed(1)}" height="24" rx="2"/>`;
+    else g += `<rect class="c-${e.type === "pump" ? "P" : e.side}" x="${x1.toFixed(1)}" y="58" width="${Math.max(3, x2 - x1).toFixed(1)}" height="24" rx="2"/>`;
   }
   for (const [a, b] of dimSpans()) {
     const x1 = L + a / 1440 * iw, x2 = L + b / 1440 * iw;
@@ -912,7 +959,9 @@ function viewInsights() {
     <div class="tile"><div class="n">${dur0(D.sleepMs / nd)}</div><div class="l">Sleep${sfx}</div></div>
     <div class="tile"><div class="n">${D.longestSleep ? fmtDur(D.longestSleep) : "–"}</div><div class="l">Longest sleep</div></div>
     <div class="tile"><div class="n">${lr ? Math.round(D.msL / lr * 100) + " / " + Math.round(D.msR / lr * 100) + "%" : "–"}</div><div class="l">Left / right</div></div>
-    ${D.ml ? `<div class="tile"><div class="n">${D.ml} ml</div><div class="l">Bottle total</div></div>` : ""}
+    ${D.ml ? `<div class="tile"><div class="n">${D.ml} ml</div><div class="l">Bottle drank</div></div>` : ""}
+    ${D.pumps ? `<div class="tile"><div class="n">${fmtNum(D.pumpMl / nd)} ml</div><div class="l">Pumped${sfx}</div></div>
+    <div class="tile"><div class="n">${dur0(D.pumpMs / nd)}</div><div class="l">Pump time${sfx}</div></div>` : ""}
   </div>`;
 
   if (!D.evs.length && !(I.mode === "day")) return h + `<p class="empty">Nothing logged in this range.</p>`;
@@ -920,11 +969,12 @@ function viewInsights() {
   if (I.mode === "day") {
     h += `<div class="chart"><p class="cap">Day clock, ${t12(S.dayStart)} to ${t12(S.dayStart)}. Outer ring is sleep, inner ring is feeds.</p>
       <div class="clock-wrap">${dayClock(D)}</div>
-      <div class="legend"><span><i class="lg-S"></i>Sleep</span><span><i class="lg-L"></i>Left</span><span><i class="lg-R"></i>Right</span><span><i class="lg-B"></i>Bottle</span></div></div>
+      <div class="legend"><span><i class="lg-S"></i>Sleep</span><span><i class="lg-L"></i>Left</span><span><i class="lg-R"></i>Right</span><span><i class="lg-B"></i>Bottle</span><span><i class="lg-P"></i>Pumping</span></div></div>
       <div class="chart"><p class="cap">Timeline</p>${dayTimeline(D)}</div>`;
     const b = D.by.get(D.end);
     h += `<section class="day"><h2>Feed times</h2><p class="tot">${b.feeds.length} feed${b.feeds.length === 1 ? "" : "s"}</p>
       ${b.feeds.length ? b.feeds.map(entryHtml).join("") : `<p class="empty">No feeds logged this day.</p>`}</section>`;
+    if (b.pumps.length) h += `<section class="day"><h2>Pumping</h2><p class="tot">${b.pumps.length} session${b.pumps.length === 1 ? "" : "s"}${b.pml ? " · " + b.pml + " ml" : ""}</p>${b.pumps.map(entryHtml).join("")}</section>`;
     return h;
   }
 
@@ -1008,14 +1058,14 @@ function openSheet(id, opt = {}) {
     ? Object.assign({ type: "feed", side: "L", start: now() - 10 * 60000, end: now(), ml: null }, opt.preset || {})
     : S.events.find(e => e.id === id);
   if (!ev) return;
-  const kind = ev.type === "sleep" ? "S" : ev.side;
+  const kind = ev.type === "sleep" ? "S" : ev.type === "pump" ? "P" : ev.side;
   const endVal = ev.end || (opt.fillEnd ? now() : null);
   const d = $("#sheet");
   d.innerHTML = `<div class="sheet-in">
     <h2>${isNew ? "Add an entry" : "Edit entry"}</h2>
     <label>What<select id="f-kind">
       <option value="L">Left side feed</option><option value="R">Right side feed</option>
-      <option value="B">Bottle</option><option value="S">Sleep</option></select></label>
+      <option value="B">Bottle</option><option value="P">Pumping</option><option value="S">Sleep</option></select></label>
     <label>Start<input id="f-start" type="datetime-local" value="${toLocalInput(ev.start)}"></label>
     <label id="f-end-wrap">End (leave empty if still running)<input id="f-end" type="datetime-local" value="${endVal ? toLocalInput(endVal) : ""}"></label>
     <label id="f-ml-wrap">Amount (ml)<input id="f-ml" type="number" inputmode="numeric" min="0" value="${ev.ml ?? ""}"></label>
@@ -1026,7 +1076,7 @@ function openSheet(id, opt = {}) {
       <button class="btn ghost" id="f-cancel">Cancel</button>
     </div></div>`;
   $("#f-kind", d).value = kind;
-  const sync = () => { const k = $("#f-kind", d).value; $("#f-ml-wrap", d).hidden = k !== "B"; };
+  const sync = () => { const k = $("#f-kind", d).value; $("#f-ml-wrap", d).hidden = k !== "B" && k !== "P"; };
   sync();
   $("#f-kind", d).addEventListener("change", sync);
   $("#f-cancel", d).addEventListener("click", () => d.close());
@@ -1039,8 +1089,8 @@ function openSheet(id, opt = {}) {
     if (!start) { err.textContent = "Add a start time."; return; }
     if (end !== null && end < start) { err.textContent = "The end time is before the start time."; return; }
     const patch = {
-      type: k === "S" ? "sleep" : "feed", side: k === "S" ? null : k, start, end,
-      ml: k === "B" ? (parseInt($("#f-ml", d).value, 10) || null) : null
+      type: k === "S" ? "sleep" : k === "P" ? "pump" : "feed", side: k === "S" || k === "P" ? null : k, start, end,
+      ml: k === "B" || k === "P" ? (parseInt($("#f-ml", d).value, 10) || null) : null
     };
     if (isNew) store.add({ ...patch, by: S.me, ack: 0 }); else store.update(id, patch);
     d.close();
@@ -1066,6 +1116,13 @@ function dueCheckin() {
     let due = 0;
     for (const m of CHECKIN_MINUTES) if (mins >= m && (f.ack || 0) < m) due = m;
     if (due) return { ev: f, mins: due, kind: "feed" };
+  }
+  const pu = activePump();
+  if (pu) {
+    const mins = (now() - pu.start) / 60000;
+    let due = 0;
+    for (const m of CHECKIN_MINUTES) if (mins >= m && (pu.ack || 0) < m) due = m;
+    if (due) return { ev: pu, mins: due, kind: "pump" };
   }
   const sl = activeSleep();
   if (sl && S.sleepCI > 0) {
@@ -1097,20 +1154,20 @@ function showCheckin(due) {
   const dlg = $("#checkin");
   const elapsed = now() - due.ev.start, baby = S.baby || "Baby", isSleep = due.kind === "sleep";
   dlg.dataset.id = due.ev.id; dlg.dataset.mins = due.mins; dlg.dataset.kind = due.kind;
-  $("#ci-title").textContent = isSleep ? "Still asleep?" : "Still feeding?";
-  $("#ci-body").textContent = isSleep
+  $("#ci-title").textContent = isSleep ? "Still asleep?" : due.kind === "pump" ? "Still pumping?" : "Still feeding?";
+  $("#ci-body").textContent = due.kind === "pump" ? `You’ve been pumping for ${fmtDur(elapsed)}.` : isSleep
     ? `${baby} has been asleep for ${fmtDur(elapsed)}.`
     : due.ev.side === "B" ? `${baby} has been on the bottle for ${fmtDur(elapsed)}.`
     : `${baby} has been on the ${sideName(due.ev.side).toLowerCase()} side for ${fmtDur(elapsed)}.`;
-  $("#ci-yes").textContent = isSleep ? "Still asleep" : "Still feeding";
+  $("#ci-yes").textContent = isSleep ? "Still asleep" : due.kind === "pump" ? "Still pumping" : "Still feeding";
   $("#ci-stop").textContent = isSleep ? "Awake: stop the timer now" : "Stop the timer now";
   $("#ci-fix").textContent = isSleep ? "Set the wake time" : "Set the end time";
   if (!dlg.open) dlg.showModal();
   try { navigator.vibrate && navigator.vibrate([250, 120, 250]); } catch {}
   beep();
   if (S.notify && document.hidden && "Notification" in window && Notification.permission === "granted" && navigator.serviceWorker) {
-    navigator.serviceWorker.ready.then(r => r.showNotification(isSleep ? "Still asleep?" : "Still feeding?", {
-      body: isSleep ? `Asleep for ${fmtDur(elapsed)}` : `${due.ev.side === "B" ? "Bottle" : sideName(due.ev.side) + " side"} · ${fmtDur(elapsed)}`, tag: "checkin", renotify: true, vibrate: [250, 120, 250]
+    navigator.serviceWorker.ready.then(r => r.showNotification(isSleep ? "Still asleep?" : due.kind === "pump" ? "Still pumping?" : "Still feeding?", {
+      body: due.kind === "pump" ? `Pumping for ${fmtDur(elapsed)}` : isSleep ? `Asleep for ${fmtDur(elapsed)}` : `${due.ev.side === "B" ? "Bottle" : sideName(due.ev.side) + " side"} · ${fmtDur(elapsed)}`, tag: "checkin", renotify: true, vibrate: [250, 120, 250]
     })).catch(() => {});
   }
 }
@@ -1118,7 +1175,7 @@ function showCheckin(due) {
 /* ---------- Keep screen awake during feeds ---------- */
 let wake = null, waking = false;
 async function keepAwake() {
-  const need = S.keepAwake && !!activeFeed() && !document.hidden;
+  const need = S.keepAwake && (!!activeFeed() || !!activePump()) && !document.hidden;
   try {
     if (need && !wake && !waking && "wakeLock" in navigator) {
       waking = true;
@@ -1199,7 +1256,7 @@ document.addEventListener("click", e => {
       break;
     case "join": joinFrom($("#join-in").value); break;
     case "ci-yes": store.update(ciDlg.dataset.id, { ack: Number(ciDlg.dataset.mins) }); ciDlg.close(); break;
-    case "ci-stop": ciDlg.close(); if (ciDlg.dataset.kind === "sleep") stopSleep(ciDlg.dataset.id); else stopFeed(ciDlg.dataset.id); break;
+    case "ci-stop": ciDlg.close(); if (ciDlg.dataset.kind === "sleep") stopSleep(ciDlg.dataset.id); else if (ciDlg.dataset.kind === "pump") stopPump(ciDlg.dataset.id); else stopFeed(ciDlg.dataset.id); break;
     case "ci-fix": ciDlg.close(); openSheet(ciDlg.dataset.id, { fillEnd: true }); break;
     case "sum-feed": $("#summary").close(); S.tab = "feed"; startFeed(b.dataset.side); render(); break;
     case "sum-sleep": $("#summary").close(); S.tab = "sleep"; startSleep(); render(); break;
@@ -1207,6 +1264,8 @@ document.addEventListener("click", e => {
     case "sum-resume": store.update(b.dataset.id, { end: null }); $("#summary").close(); break;
     case "sum-fix": saveBottleMl(); $("#summary").close(); openSheet(b.dataset.id); break;
     case "start-bottle": startFeed("B"); break;
+    case "start-pump": startPump(); break;
+    case "stop-pump": { const pm = activePump(); if (pm) stopPump(pm.id); break; }
     case "sum-done": $("#summary").close(); break;
     case "logview": S.logView = b.dataset.v; render(); window.scrollTo(0, 0); break;
     case "ins-mode": {
